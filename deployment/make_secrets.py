@@ -13,16 +13,32 @@ def txt_to_define(path: str, name: str) -> str:
 def generate_secrets(device: str, root_path: str):
     if not device in valid_devices:
         raise NameError(f"{device} not a valid device found in {valid_devices}")
-    path_header = f"{root_path}/secrets_{device}.h"
+    
+    # Add certs/keys to secrets_<device>.h
+    if not os.path.exists(f"{root_path}/secrets"):
+        os.mkdir(f"{root_path}/secrets")
+
+    path_header = f"{root_path}/secrets/secrets_{device}.h"
     path_key = f"{root_path}/certs/{device}.key"
     path_root = f"{root_path}/certs/rootCA.pem"
+    
     lines = []
-    lines.append(txt_to_define(path_root, 'PEM_ROOTCA'))
-    lines.append(txt_to_define(path_key, 'KEY_AP'))
-    for d in valid_devices:
-        if d == device:
-            continue
-        lines.append(txt_to_define(f"{root_path}/certs/{d}.crt", f"KEY_{d.upper()}"))
+    lines.append(txt_to_define(path_root, 'CRT_ROOT'))
+    
+    if device == 'ap':
+        lines.append(txt_to_define(path_key, 'KEY_AP'))
+        lines.append(txt_to_define(f"{root_path}/certs/ap.crt", "CRT_AP"))
+        lines.append(txt_to_define(f"{root_path}/certs/cmp1.crt", "CRT_CMP1"))
+        lines.append(txt_to_define(f"{root_path}/certs/cmp2.crt", "CRT_CMP2"))
+    elif device == 'cmp1':
+        lines.append(txt_to_define(path_key, 'KEY_CMP1'))
+        lines.append(txt_to_define(f"{root_path}/certs/cmp1.crt", "CRT_CMP1"))
+        lines.append(txt_to_define(f"{root_path}/certs/cmp2.crt", "CRT_AP"))
+    elif device == 'cmp2':
+        lines.append(txt_to_define(path_key, 'KEY_CMP2'))
+        lines.append(txt_to_define(f"{root_path}/certs/cmp1.crt", "CRT_CMP2"))
+        lines.append(txt_to_define(f"{root_path}/certs/cmp2.crt", "CRT_AP"))
+        
     
     with open(path_header, 'w') as header:
         header.writelines(lines)
