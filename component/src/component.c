@@ -26,11 +26,11 @@
 
 // Includes from containerized build
 #include "ectf_params.h"
-#include "global_secrets.h"
+// #include "global_secrets.h"
 #ifdef TBD_ENV_VARIABLE_FROM_MAKEFILE
-    #include "secrets_cmp1.h"
+    #include "secrets/secrets_cmp1.h"
 #else 
-    #include "secrets_cmp2.h"
+    #include "secrets/secrets_cmp2.h"
 #endif
 
 #ifdef POST_BOOT
