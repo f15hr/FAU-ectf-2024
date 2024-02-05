@@ -5,7 +5,7 @@ def txt_to_define(path: str, name: str) -> str:
             def_str += f'"{line.strip()}" \\\n'
     return def_str[0:-2]
 
-def generate_secrets(device: str, root_path: str):
+def write_certs_to_header(device: str, root_path: str):
     if not device in valid_devices:
         raise NameError(f"{device} not a valid device found in {valid_devices}")
     
@@ -45,4 +45,4 @@ if __name__=="__main__":
     valid_devices = ['ap', 'cmp1', 'cmp2']
 
     for device in valid_devices:
-        generate_secrets(device, sys.argv[1])
+        write_certs_to_header(device, sys.argv[1])
