@@ -4,7 +4,7 @@
 .vscode/
 **/gcc
 deployment/certs/*
-deployment/secrets/*
+deployment/incl/*
 *.drawio.bkp
 
 !device/lib

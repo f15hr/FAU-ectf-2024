@@ -10,10 +10,10 @@ def generate_secrets(device: str, root_path: str):
         raise NameError(f"{device} not a valid device found in {valid_devices}")
     
     # Add certs/keys to secrets_<device>.h
-    if not os.path.exists(f"{root_path}/secrets"):
-        os.mkdir(f"{root_path}/secrets")
+    if not os.path.exists(f"{root_path}/incl"):
+        os.mkdir(f"{root_path}/incl")
 
-    path_header = f"{root_path}/secrets/secrets_{device}.h"
+    path_header = f"{root_path}/incl/secrets_{device}.h"
     path_key = f"{root_path}/certs/{device}.key"
     path_root = f"{root_path}/certs/rootCA.pem"
 
