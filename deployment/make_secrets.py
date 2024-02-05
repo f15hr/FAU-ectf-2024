@@ -28,11 +28,11 @@ def generate_secrets(device: str, root_path: str):
     elif device == 'cmp1':
         lines.append(txt_to_define(path_key, 'KEY_CMP1'))
         lines.append(txt_to_define(f"{root_path}/certs/cmp1.crt", "CRT_CMP1"))
-        lines.append(txt_to_define(f"{root_path}/certs/cmp2.crt", "CRT_AP"))
+        lines.append(txt_to_define(f"{root_path}/certs/ap.crt", "CRT_AP"))
     elif device == 'cmp2':
         lines.append(txt_to_define(path_key, 'KEY_CMP2'))
-        lines.append(txt_to_define(f"{root_path}/certs/cmp1.crt", "CRT_CMP2"))
-        lines.append(txt_to_define(f"{root_path}/certs/cmp2.crt", "CRT_AP"))
+        lines.append(txt_to_define(f"{root_path}/certs/cmp2.crt", "CRT_CMP2"))
+        lines.append(txt_to_define(f"{root_path}/certs/ap.crt", "CRT_AP"))
         
     
     with open(path_header, 'w') as header:
@@ -43,7 +43,6 @@ if __name__=="__main__":
     import sys
 
     valid_devices = ['ap', 'cmp1', 'cmp2']
-    
-    generate_secrets("ap", sys.argv[1])
-    generate_secrets("cmp1", sys.argv[1])
-    generate_secrets("cmp2", sys.argv[1])
+
+    for device in valid_devices:
+        generate_secrets(device, sys.argv[1])
