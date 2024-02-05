@@ -1,8 +1,3 @@
-import os
-import sys
-
-valid_devices = ['ap', 'cmp1', 'cmp2']
-
 def txt_to_define(path: str, name: str) -> str:
     def_str = f"\n#define {name.upper()} "
     with open(path) as file:
@@ -21,7 +16,7 @@ def generate_secrets(device: str, root_path: str):
     path_header = f"{root_path}/secrets/secrets_{device}.h"
     path_key = f"{root_path}/certs/{device}.key"
     path_root = f"{root_path}/certs/rootCA.pem"
-    
+
     lines = []
     lines.append(txt_to_define(path_root, 'CRT_ROOT'))
     
@@ -44,6 +39,11 @@ def generate_secrets(device: str, root_path: str):
         header.writelines(lines)
 
 if __name__=="__main__":
+    import os
+    import sys
+
+    valid_devices = ['ap', 'cmp1', 'cmp2']
+    
     generate_secrets("ap", sys.argv[1])
     generate_secrets("cmp1", sys.argv[1])
     generate_secrets("cmp2", sys.argv[1])
