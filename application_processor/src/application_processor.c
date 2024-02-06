@@ -491,6 +491,10 @@ int main() {
     // Initialize board
     init();
 
+    #ifdef CRYPTO_EXAMPLE
+        print_debug("CRYPTO_EXAMPLE enabled");
+    #endif
+
     // Print the component IDs to be helpful
     // Your design does not need to do this
     print_info("Application Processor Started\n");
