@@ -3,6 +3,9 @@
 .DS_Store
 .vscode/
 **/gcc
+deployment/certs/*
+deployment/incl/*
+*.drawio.bkp
 
 !device/lib
 
