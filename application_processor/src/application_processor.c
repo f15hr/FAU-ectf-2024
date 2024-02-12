@@ -18,6 +18,7 @@
 #include "mxc_delay.h"
 #include "mxc_device.h"
 #include "nvic_table.h"
+#include "trng.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -418,14 +419,9 @@ void attempt_boot() {
         print_error("Failed to boot all components\n");
         return;
     }
-    // Reference design flag
-    // Remove this in your design
-    char flag[37];
-    for (int i = 0; aseiFuengleR[i]; i++) {
-        flag[i] = deobfuscate(aseiFuengleR[i], djFIehjkklIH[i]);
-        flag[i+1] = 0;
-    }
-    print_debug("%s\n", flag);
+
+
+
     // Print boot message
     // This always needs to be printed when booting
     print_info("AP>%s\n", AP_BOOT_MSG);
