@@ -18,6 +18,7 @@
 #include "mxc_errors.h"
 #include "nvic_table.h"
 #include "trng.h"
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>

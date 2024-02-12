@@ -9,6 +9,9 @@ deployment/incl/*
 
 !device/lib
 
+*.disasm
+*.sym
+
 ## Begin Generic .gitignore ##
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,c,c++,git,pycharm

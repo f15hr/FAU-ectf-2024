@@ -35,13 +35,23 @@ ENTRY=firmware_startup
 # WolfSSL can be downloaded from: https://www.wolfssl.com/download/
 
 # Disable Crypto Example
-# CRYPTO_EXAMPLE=0
+CRYPTO_EXAMPLE=0
 
 # Enable Crypto Example
-CRYPTO_EXAMPLE=1
+# CRYPTO_EXAMPLE=1
 
 DEBUG = 1
 
 # wolfssl Flags
 # https://www.wolfssl.com/documentation/manuals/wolfssl/chapter02.html#building-with-gcc-arm
-PROJ_CFLAGS += -DHAVE_PK_CALLBACKS -DWOLFSSL_USER_IO -DNO_WRITEV -DTIME_T_NOT_64BIT
+# https://www.wolfssl.com/how-do-i-manage-the-build-configuration-of-wolfssl/
+PROJ_CFLAGS += -DWOLFSSL_USER_SETTINGS -DHAVE_PK_CALLBACKS -DWOLFSSL_USER_IO -DNO_WRITEV -DTIME_T_NOT_64BIT
+USER_SETTINGS_DIR ?= $(abspath wolfssl/IDE/GCC-ARM/Header)
+IPATH += $(USER_SETTINGS_DIR)
+IPATH += $(abspath ./wolfssl)
+
+PROJ_LDFLAGS += -L$(abspath ./wolfssl/IDE/GCC-ARM/Build/)
+PROJ_LIBS += :libwolfssl.a
+
+print-%  : ; @echo $* = $($*)
+

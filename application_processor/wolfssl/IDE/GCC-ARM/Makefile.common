@@ -5,7 +5,7 @@ CMD_ECHO =
 BUILD_DIR = ./Build
 
 # Toolchain location and prefix
-#TOOLCHAIN =
+TOOLCHAIN = arm-none-eabi-
 TOOLCHAIN ?= /opt/gcc-arm-none-eabi/bin/arm-none-eabi-
 
 # Tools selection

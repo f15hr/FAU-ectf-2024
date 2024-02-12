@@ -32,6 +32,8 @@
 #include "simple_crypto.h"
 #endif
 
+#include "wolfssl/wolfssl/ssl.h"
+
 #ifdef POST_BOOT
 #include <stdint.h>
 #include <stdio.h>
@@ -487,6 +489,16 @@ void attempt_attest() {
 int main() {
     // Initialize board
     init();
+
+    // init TRNG
+    MXC_TRNG_Init();
+    // test trng
+    uint8_t var_rnd_no[16] = {0};
+    MXC_TRNG_Random(var_rnd_no, 16);
+
+    // test wolfssl
+    WOLFSSL_CERT_MANAGER * wssl_cm;
+    wssl_cm = wolfSSL_CertManagerNew();
 
     #ifdef CRYPTO_EXAMPLE
         print_debug("CRYPTO_EXAMPLE enabled");
