@@ -297,12 +297,12 @@ extern "C" {
 /* Ed25519 / Curve25519 */
 #undef HAVE_CURVE25519
 #undef HAVE_ED25519
-#if 0
+#if 1
     #define HAVE_CURVE25519
     #define HAVE_ED25519 /* ED25519 Requires SHA512 */
 
     /* Optionally use small math (less flash usage, but much slower) */
-    #if 1
+    #if 0
         #define CURVED25519_SMALL
     #endif
 #endif
@@ -336,7 +336,7 @@ extern "C" {
 
 /* Sha512 */
 #undef WOLFSSL_SHA512
-#if 0
+#if 1
     #define WOLFSSL_SHA512
 
     /* Sha384 */
@@ -649,6 +649,7 @@ extern unsigned int my_rng_seed_gen(void);
 #undef WOLFSSL_IGNORE_FILE_WARN
 #define WOLFSSL_IGNORE_FILE_WARN
 
+#define WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY 1
 
 #ifdef __cplusplus
 }

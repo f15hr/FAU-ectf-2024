@@ -16,7 +16,7 @@ openssl genpkey -algorithm ed25519 -out certs/cmp1.key
 openssl genpkey -algorithm ed25519 -out certs/cmp2.key
 
 # Generate the root certificate (the host computer)
-openssl req -x509 -new -nodes -config openssl.conf -key certs/rootCA.key -sha256 -days 1024 -out certs/rootCA.pem
+openssl req -x509 -new -nodes -config openssl_root.conf -extensions ca_extensions -set_serial 20 -key certs/rootCA.key -days 1024 -out certs/rootCA.pem
 
 # Generate certificate signing requests (CSRs) for all devices
 openssl req -new -config openssl.conf -key certs/ap.key -out certs/ap.csr
@@ -24,9 +24,9 @@ openssl req -new -config openssl.conf -key certs/cmp1.key -out certs/cmp1.csr
 openssl req -new -config openssl.conf -key certs/cmp2.key -out certs/cmp2.csr
 
 # Sign the CSR, creating a certificate
-openssl x509 -req -in certs/ap.csr -CA certs/rootCA.pem -CAkey certs/rootCA.key -CAcreateserial -out certs/ap.crt -days 365 -sha256
-openssl x509 -req -in certs/cmp1.csr -CA certs/rootCA.pem -CAkey certs/rootCA.key -CAcreateserial -out certs/cmp1.crt -days 365 -sha256
-openssl x509 -req -in certs/cmp2.csr -CA certs/rootCA.pem -CAkey certs/rootCA.key -CAcreateserial -out certs/cmp2.crt -days 365 -sha256
+openssl x509 -req -in certs/ap.csr -CA certs/rootCA.pem -CAkey certs/rootCA.key -extfile openssl.conf -extensions x509v3_extensions  -set_serial 21 -out certs/ap.crt -days 365 -sha256
+openssl x509 -req -in certs/cmp1.csr -CA certs/rootCA.pem -CAkey certs/rootCA.key -extfile openssl.conf -extensions x509v3_extensions  -set_serial 21 -out certs/cmp1.crt -days 365 -sha256
+openssl x509 -req -in certs/cmp2.csr -CA certs/rootCA.pem -CAkey certs/rootCA.key -extfile openssl.conf -extensions x509v3_extensions  -set_serial 21 -out certs/cmp2.crt -days 365 -sha256
 
 # Verify the certificates
 # openssl x509 -in ap.crt -text -noout

@@ -8,3 +8,5 @@ release:
 clean:
 	$(MAKE) -f ./Makefile.maxim clean
 
+wolfclean:
+	-$(MAKE) -C $(abspath ./wolfssl/IDE/GCC-ARM/) clean

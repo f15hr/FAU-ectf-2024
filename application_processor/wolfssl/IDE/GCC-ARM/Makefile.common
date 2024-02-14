@@ -64,7 +64,7 @@ CFLAGS += -Os -ffunction-sections -fdata-sections -fno-builtin
 LDFLAGS += -Wl,--gc-sections -flto
 
 # Debugging
-#DBGFLAGS = -ggdb -g3
+DBGFLAGS = -ggdb -g3
 CFLAGS += $(DBGFLAGS)
 LDFLAGS += $(DBGFLAGS)
 

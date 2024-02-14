@@ -123,7 +123,13 @@ typedef uint32_t aErjfkdfru;const aErjfkdfru aseiFuengleR[]={0x1ffe4b6,0x3098ac,
  * This function must be implemented by your team to align with the security requirements.
 
 */
+int wolfSSL_secure_send(WOLFSSL *ssl, char *buf, int sz, void *ctx) {
+    
+}
+
 int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
+    
+    
     return send_packet(address, len, buffer);
 }
 
@@ -188,6 +194,10 @@ void init() {
     
     // Initialize board link interface
     board_link_init();
+
+    // Initialize WOLFSSL
+    int wfInitSuccess = wolfSSL_Init();
+
 }
 
 // Send a command to a component and receive the result
@@ -497,9 +507,29 @@ int main() {
     MXC_TRNG_Random(var_rnd_no, 16);
 
     // test wolfssl
-    WOLFSSL_CERT_MANAGER * wssl_cm;
-    wssl_cm = wolfSSL_CertManagerNew();
+    // WOLFSSL_CERT_MANAGER * wssl_cm;
+    // wssl_cm = wolfSSL_CertManagerNew();
+    // volatile int cmCAsuccess = 0;
+    // uint8_t CAbuffer[sizeof(CRT_ROOT)];
+    // memcpy(CAbuffer, CRT_ROOT, sizeof(CRT_ROOT));
+    // cmCAsuccess = wolfSSL_CertManagerLoadCABuffer(wssl_cm, CAbuffer, sizeof(CRT_ROOT), WOLFSSL_FILETYPE_PEM);
+    // if(cmCAsuccess != 1) {
+    //     volatile int aaaa = 0;
+    // }
 
+    WOLFSSL_CTX* ctx;
+    WOLFSSL* ssl;
+    WOLFSSL_METHOD* method;
+
+    method = wolfSSLv23_client_method();
+    ctx = wolfSSL_CTX_new(method);
+    volatile int please = wolfSSL_CTX_load_verify_buffer_ex(ctx, CRT_ROOT, (long)sizeof(CRT_ROOT), SSL_FILETYPE_PEM, 0, 1);
+    volatile int please2 = wolfSSL_CTX_use_PrivateKey_buffer(ctx, KEY_AP, sizeof(KEY_AP), SSL_FILETYPE_PEM);
+    volatile int please3 = wolfSSL_CTX_use_certificate_buffer(ctx, CRT_AP, sizeof(CRT_AP), SSL_FILETYPE_PEM);
+
+    // wolfSSL_CTX_SetIOSend();
+    // wolfSSL_CTX_SetIOReceive();S
+    
     #ifdef CRYPTO_EXAMPLE
         print_debug("CRYPTO_EXAMPLE enabled");
     #endif
@@ -529,4 +559,5 @@ int main() {
 
     // Code never reaches here
     return 0;
+
 }
