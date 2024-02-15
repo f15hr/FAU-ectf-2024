@@ -21,17 +21,17 @@ def write_certs_to_header(device: str, root_path: str):
     lines.append(txt_to_define(path_root, 'CRT_ROOT'))
     
     if device == 'ap':
-        lines.append(txt_to_define(path_key, 'KEY_AP'))
-        lines.append(txt_to_define(f"{root_path}/certs/ap.crt", "CRT_AP"))
+        lines.append(txt_to_define(path_key, 'KEY_DEV'))
+        lines.append(txt_to_define(f"{root_path}/certs/ap.crt", "CRT_DEV"))
         lines.append(txt_to_define(f"{root_path}/certs/cmp1.crt", "CRT_CMP1"))
         lines.append(txt_to_define(f"{root_path}/certs/cmp2.crt", "CRT_CMP2"))
     elif device == 'cmp1':
-        lines.append(txt_to_define(path_key, 'KEY_CMP1'))
-        lines.append(txt_to_define(f"{root_path}/certs/cmp1.crt", "CRT_CMP1"))
+        lines.append(txt_to_define(path_key, 'KEY_DEV'))
+        lines.append(txt_to_define(f"{root_path}/certs/cmp1.crt", "CRT_DEV"))
         lines.append(txt_to_define(f"{root_path}/certs/ap.crt", "CRT_AP"))
     elif device == 'cmp2':
-        lines.append(txt_to_define(path_key, 'KEY_CMP2'))
-        lines.append(txt_to_define(f"{root_path}/certs/cmp2.crt", "CRT_CMP2"))
+        lines.append(txt_to_define(path_key, 'KEY_DEV'))
+        lines.append(txt_to_define(f"{root_path}/certs/cmp2.crt", "CRT_DEV"))
         lines.append(txt_to_define(f"{root_path}/certs/ap.crt", "CRT_AP"))
         
     

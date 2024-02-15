@@ -39,8 +39,7 @@ ENTRY=firmware_startup
 # CRYPTO_EXAMPLE=0
 
 # Enable Crypto Example
-CRYPTO_EXAMPLE=1
+CRYPTO_EXAMPLE=0
 
-# wolfssl Flags
-# https://www.wolfssl.com/documentation/manuals/wolfssl/chapter02.html#building-with-gcc-arm
-PROJ_CFLAGS += -DHAVE_PK_CALLBACKS -DWOLFSSL_USER_IO -DNO_WRITEV -DTIME_T_NOT_64BIT
+DEBUG = 1
+# include $(abspath ../common/common.mk)

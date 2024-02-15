@@ -195,8 +195,12 @@ void init() {
     // Initialize board link interface
     board_link_init();
 
+    // Init TRNG
+    MXC_TRNG_Init();
+
     // Initialize WOLFSSL
     int wfInitSuccess = wolfSSL_Init();
+
 
 }
 
@@ -500,33 +504,20 @@ int main() {
     // Initialize board
     init();
 
-    // init TRNG
-    MXC_TRNG_Init();
     // test trng
     uint8_t var_rnd_no[16] = {0};
     MXC_TRNG_Random(var_rnd_no, 16);
 
-    // test wolfssl
-    // WOLFSSL_CERT_MANAGER * wssl_cm;
-    // wssl_cm = wolfSSL_CertManagerNew();
-    // volatile int cmCAsuccess = 0;
-    // uint8_t CAbuffer[sizeof(CRT_ROOT)];
-    // memcpy(CAbuffer, CRT_ROOT, sizeof(CRT_ROOT));
-    // cmCAsuccess = wolfSSL_CertManagerLoadCABuffer(wssl_cm, CAbuffer, sizeof(CRT_ROOT), WOLFSSL_FILETYPE_PEM);
-    // if(cmCAsuccess != 1) {
-    //     volatile int aaaa = 0;
-    // }
-
+    // test wolfSSL
     WOLFSSL_CTX* ctx;
     WOLFSSL* ssl;
     WOLFSSL_METHOD* method;
 
     method = wolfSSLv23_client_method();
     ctx = wolfSSL_CTX_new(method);
-    volatile int please = wolfSSL_CTX_load_verify_buffer_ex(ctx, CRT_ROOT, (long)sizeof(CRT_ROOT), SSL_FILETYPE_PEM, 0, 1);
-    volatile int please2 = wolfSSL_CTX_use_PrivateKey_buffer(ctx, KEY_AP, sizeof(KEY_AP), SSL_FILETYPE_PEM);
-    volatile int please3 = wolfSSL_CTX_use_certificate_buffer(ctx, CRT_AP, sizeof(CRT_AP), SSL_FILETYPE_PEM);
-
+    volatile int please = wolfSSL_CTX_load_verify_buffer_ex(ctx, CRT_ROOT, sizeof(CRT_ROOT), SSL_FILETYPE_PEM, 0, 1);
+    volatile int please2 = wolfSSL_CTX_use_PrivateKey_buffer(ctx, KEY_DEV, sizeof(KEY_DEV), SSL_FILETYPE_PEM);
+    volatile int please3 = wolfSSL_CTX_use_certificate_buffer(ctx, CRT_DEV, sizeof(CRT_DEV), SSL_FILETYPE_PEM);
     // wolfSSL_CTX_SetIOSend();
     // wolfSSL_CTX_SetIOReceive();S
     

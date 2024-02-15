@@ -28,12 +28,23 @@
 
 // Includes from containerized build
 #include "ectf_params.h"
+
 // #include "global_secrets.h"
-#ifdef TBD_ENV_VARIABLE_FROM_MAKEFILE
-    #include "incl/secrets_cmp1.h"
-#else 
-    #include "incl/secrets_cmp2.h"
-#endif
+// #ifdef TBD_ENV_VARIABLE_FROM_MAKEFILE
+//     #include "incl/secrets_cmp1.h"
+// #else 
+//     #include "incl/secrets_cmp2.h"
+// #endif
+
+// // #include "global_secrets.h"
+// #ifdef COMPONENT_ID
+// #if COMPONENT_ID == 0x11111124
+//     #include "incl/secrets_cmp1.h"
+// #elif COMPONENT_ID == 0x11111125
+//     #include "incl/secrets_cmp2.h"
+// #endif
+// #endif
+
 
 #ifdef POST_BOOT
 #include "led.h"
