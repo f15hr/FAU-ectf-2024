@@ -1,22 +1,42 @@
-# Makefile for common settings between the AP and the Components
-DEBUG = 1
+WOLFSSL_DIR := $(abspath ../common/wolfssl/IDE/GCC-ARM/)
 
-############## BEGIN WOLFSSL CONFIGURATION ############## 
-# wolfssl Flags
-# https://www.wolfssl.com/documentation/manuals/wolfssl/chapter02.html#building-with-gcc-arm
-# https://www.wolfssl.com/how-do-i-manage-the-build-configuration-of-wolfssl/
-PROJ_CFLAGS += -DWOLFSSL_USER_SETTINGS -DHAVE_PK_CALLBACKS \
-               -DWOLFSSL_USER_IO -DNO_WRITEV -DTIME_T_NOT_64BIT \
-			   -DWOLFSSL_LOAD_FLAG_DATE_ERR_OKAY
-USER_SETTINGS_DIR ?= $(abspath ../common/wolfssl/IDE/GCC-ARM/Header)
-IPATH += $(USER_SETTINGS_DIR)
-IPATH += $(abspath ../common/wolfssl)
-IPATH += $(abspath ../common/)
+.PHONY: all, release, clean, wolfssl, wolfclean, sslgen
 
-PROJ_LDFLAGS += -L$(abspath ../common/wolfssl/IDE/GCC-ARM/Build/)
-PROJ_LIBS += :libwolfssl.a
-############## END WOLFSSL CONFIGURATION ############## 
+print-%: 
+	$(MAKE) -f ./Makefile.maxim print-$*
 
-# Prints a variable's value to tty
-# example usage: 'make print-PROJ_LDFLAGS'
-print-%  : ; @echo $* = $($*)
+ifeq ($(DEVICE), "COMPONENT")
+all:
+	-$(MAKE) -C $(WOLFSSL_DIR) WolfSSLStaticLib
+	$(MAKE) -f ./Makefile.maxim
+	@bash ../common/openssl/ssl_gen_server.sh $(CURDIR)
+	cd ../common/openssl && python make_ssl_headers.py "COMPONENT" $(CURDIR)
+
+sslgen:
+	@bash ../common/openssl/ssl_gen_server.sh $(CURDIR)
+	cd ../common/openssl && python make_ssl_headers.py "COMPONENT" $(CURDIR)
+	
+else ifeq ($(DEVICE), "AP")
+all:
+	-$(MAKE) -C $(WOLFSSL_DIR) WolfSSLStaticLib
+	$(MAKE) -f ./Makefile.maxim
+	cd ../common/openssl && python make_ssl_headers.py "AP" $(CURDIR)
+
+sslgen:
+	cd ../common/openssl && python make_ssl_headers.py "AP" $(CURDIR)
+
+else 
+$(error ERROR: Varaible DEVICE with value $(DEVICE) is not valid!)
+endif
+
+release:
+	$(MAKE) -f ./Makefile.maxim release
+
+clean:
+	$(MAKE) -f ./Makefile.maxim clean
+
+wolfssl:
+	-$(MAKE) -C $(WOLFSSL_DIR) WolfSSLStaticLib
+
+wolfclean:
+	-$(MAKE) -C $(WOLFSSL_DIR) clean

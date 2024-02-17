@@ -481,9 +481,9 @@ extern unsigned long my_time(unsigned long* timer);
 /* Seed Source */
 /* Size of returned HW RNG value */
 #define CUSTOM_RAND_TYPE      unsigned int
-extern unsigned int my_rng_seed_gen(void);
+extern unsigned int get_random_trng(void);
 #undef  CUSTOM_RAND_GENERATE
-#define CUSTOM_RAND_GENERATE  my_rng_seed_gen
+#define CUSTOM_RAND_GENERATE  get_random_trng
 
 /* Choose RNG method */
 #if 1

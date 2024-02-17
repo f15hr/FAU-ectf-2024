@@ -1,22 +1,2 @@
-WOLFSSL_DIR := $(abspath ../common/wolfssl/IDE/GCC-ARM/)
-
-.PHONY: all, release, clean, wolfssl, wolfclean
-
-print-%: 
-	$(MAKE) -f ./Makefile.maxim print-$*
-
-all: 
-	-$(MAKE) -C $(WOLFSSL_DIR) WolfSSLStaticLib
-	$(MAKE) -f ./Makefile.maxim
-
-release:
-	$(MAKE) -f ./Makefile.maxim release
-
-clean:
-	$(MAKE) -f ./Makefile.maxim clean
-
-wolfssl:
-	-$(MAKE) -C $(WOLFSSL_DIR) WolfSSLStaticLib
-
-wolfclean:
-	-$(MAKE) -C $(WOLFSSL_DIR) clean
+DEVICE := "AP"
+include $(abspath ../common/common.mk) 

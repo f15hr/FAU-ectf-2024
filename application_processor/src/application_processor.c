@@ -33,6 +33,8 @@
 #endif
 
 #include "wolfssl/wolfssl/ssl.h"
+#include "wolfssl_rxtx.h"
+#include "rng.h"
 
 #ifdef POST_BOOT
 #include <stdint.h>
@@ -41,8 +43,7 @@
 
 // Includes from containerized build
 #include "ectf_params.h"
-// #include "global_secrets.h"
-#include "incl/secrets_ap.h"
+#include "secrets_ap.h"
 
 /********************************* CONSTANTS **********************************/
 
@@ -508,6 +509,8 @@ int main() {
     uint8_t var_rnd_no[16] = {0};
     MXC_TRNG_Random(var_rnd_no, 16);
 
+    volatile unsigned int rng_test = get_random_trng();
+
     // test wolfSSL
     WOLFSSL_CTX* ctx;
     WOLFSSL* ssl;
@@ -515,9 +518,12 @@ int main() {
 
     method = wolfSSLv23_client_method();
     ctx = wolfSSL_CTX_new(method);
-    volatile int please = wolfSSL_CTX_load_verify_buffer_ex(ctx, CRT_ROOT, sizeof(CRT_ROOT), SSL_FILETYPE_PEM, 0, 1);
-    volatile int please2 = wolfSSL_CTX_use_PrivateKey_buffer(ctx, KEY_DEV, sizeof(KEY_DEV), SSL_FILETYPE_PEM);
-    volatile int please3 = wolfSSL_CTX_use_certificate_buffer(ctx, CRT_DEV, sizeof(CRT_DEV), SSL_FILETYPE_PEM);
+    ssl = wolfSSL_new(ctx);
+
+    wolfSSL_CTX_SetIOSend(ctx, i2cwolf_send);
+    wolfSSL_CTX_SetIORecv(ctx, i2cwolf_receive); 
+
+    volatile int please = wolfSSL_CTX_load_verify_buffer_ex(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM, 0, 1);
     // wolfSSL_CTX_SetIOSend();
     // wolfSSL_CTX_SetIOReceive();S
     

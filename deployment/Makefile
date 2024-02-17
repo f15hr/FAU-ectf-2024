@@ -11,9 +11,8 @@ PWD := $(shell echo $$PWD)
 
 all:
 	# echo "#define SECRET 1234" > global_secrets.h
-	chmod +x gen_certs.sh
-	bash gen_certs.sh
-	python make_secrets.py $(PWD)
+	chmod +x ssl_gen_ca.sh
+	@bash ssl_gen_ca.sh
 
 clean:
 	rm -f global_secrets.h

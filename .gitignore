@@ -4,8 +4,13 @@
 .vscode/
 **/gcc
 deployment/certs/*
-deployment/incl/*
+**/build/certs
 *.drawio.bkp
+secrets_*
+*.pem
+*.key
+*.crt
+*.csr
 
 !device/lib
 
