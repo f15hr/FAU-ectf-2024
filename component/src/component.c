@@ -26,6 +26,10 @@
 #include "simple_i2c_peripheral.h"
 #include "board_link.h"
 
+#include "wolfssl/wolfssl/ssl.h"
+#include "wolfssl_rxtx.h"
+#include "rng.h"
+
 // Includes from containerized build
 #include "ectf_params.h"
 
