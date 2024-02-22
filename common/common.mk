@@ -7,10 +7,10 @@ print-%:
 
 ifeq ($(DEVICE), "COMPONENT")
 all:
-	-$(MAKE) -C $(WOLFSSL_DIR) WolfSSLStaticLib
-	$(MAKE) -f ./Makefile.maxim
 	@bash ../common/openssl/ssl_gen_server.sh $(CURDIR)
 	cd ../common/openssl && python make_ssl_headers.py "COMPONENT" $(CURDIR)
+	-$(MAKE) -C $(WOLFSSL_DIR) WolfSSLStaticLib
+	$(MAKE) -f ./Makefile.maxim
 
 sslgen:
 	@bash ../common/openssl/ssl_gen_server.sh $(CURDIR)
@@ -18,9 +18,9 @@ sslgen:
 	
 else ifeq ($(DEVICE), "AP")
 all:
+	cd ../common/openssl && python make_ssl_headers.py "AP" $(CURDIR)
 	-$(MAKE) -C $(WOLFSSL_DIR) WolfSSLStaticLib
 	$(MAKE) -f ./Makefile.maxim
-	cd ../common/openssl && python make_ssl_headers.py "AP" $(CURDIR)
 
 sslgen:
 	cd ../common/openssl && python make_ssl_headers.py "AP" $(CURDIR)

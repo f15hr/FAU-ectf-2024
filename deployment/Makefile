@@ -10,9 +10,8 @@ __check_defined = \
 PWD := $(shell echo $$PWD)
 
 all:
-	# echo "#define SECRET 1234" > global_secrets.h
 	chmod +x ssl_gen_ca.sh
-	@bash ssl_gen_ca.sh
+	./ssl_gen_ca.sh
 
 clean:
-	rm -f global_secrets.h
+	rm -rf certs

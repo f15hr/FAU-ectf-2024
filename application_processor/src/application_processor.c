@@ -516,6 +516,7 @@ int main() {
     WOLFSSL* ssl;
     WOLFSSL_METHOD* method;
 
+
     method = wolfSSLv23_client_method();
     ctx = wolfSSL_CTX_new(method);
     ssl = wolfSSL_new(ctx);
@@ -524,6 +525,12 @@ int main() {
     wolfSSL_CTX_SetIORecv(ctx, i2cwolf_receive); 
 
     volatile int please = wolfSSL_CTX_load_verify_buffer_ex(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM, 0, 1);
+    wolfSSL_SetIORecv(ctx, i2cwolf_receive);
+    wolfSSL_SetIOSend(ctx, i2cwolf_send);
+
+    unsigned char sendt[4] = {0};
+    // wolfSSL_write(ssl, sendt, 4);
+    wolfSSL_send(ssl, sendt, 4, 0);
     // wolfSSL_CTX_SetIOSend();
     // wolfSSL_CTX_SetIOReceive();S
     

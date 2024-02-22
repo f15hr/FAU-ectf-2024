@@ -115,7 +115,7 @@ extern "C" {
 /* ------------------------------------------------------------------------- */
 /* RSA */
 #undef NO_RSA
-#if 1
+#if 0
     #ifdef USE_FAST_MATH
         /* Maximum math bits (Max RSA key bits * 2) */
         #undef  FP_MAX_BITS
@@ -302,7 +302,7 @@ extern "C" {
     #define HAVE_ED25519 /* ED25519 Requires SHA512 */
 
     /* Optionally use small math (less flash usage, but much slower) */
-    #if 0
+    #if 1
         #define CURVED25519_SMALL
     #endif
 #endif
@@ -648,8 +648,6 @@ extern unsigned int get_random_trng(void);
 
 #undef WOLFSSL_IGNORE_FILE_WARN
 #define WOLFSSL_IGNORE_FILE_WARN
-
-#define WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY 1
 
 #ifdef __cplusplus
 }
