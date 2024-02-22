@@ -584,16 +584,16 @@ extern unsigned int get_random_trng(void);
 /* Disable Features */
 /* ------------------------------------------------------------------------- */
 #undef  NO_WOLFSSL_SERVER
-//#define NO_WOLFSSL_SERVER
+#define NO_WOLFSSL_SERVER
 
 #undef  NO_WOLFSSL_CLIENT
 //#define NO_WOLFSSL_CLIENT
 
 #undef  NO_CRYPT_TEST
-//#define NO_CRYPT_TEST
+#define NO_CRYPT_TEST
 
 #undef  NO_CRYPT_BENCHMARK
-//#define NO_CRYPT_BENCHMARK
+#define NO_CRYPT_BENCHMARK
 
 #undef  WOLFCRYPT_ONLY
 //#define WOLFCRYPT_ONLY
