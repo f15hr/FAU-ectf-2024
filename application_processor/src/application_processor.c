@@ -504,13 +504,15 @@ int main() {
     WOLFSSL_CTX* ctx;
     WOLFSSL* ssl;
 
-    ctx = wolfSSL_CTX_new(wolfTLSv1_2_client_method());
+    ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method());
     if(!ctx) {
         #ifdef DEBUG
         print_info("Failed to create WolfSSL CTX");
         #endif
         return -1;
     }
+
+    uint8_t test[3] = {0};
 
     // These functions set the callback on the *ctx level
     // wolfSSL_CTX_SetIOSend(ctx, i2cwolf_send);
@@ -520,6 +522,8 @@ int main() {
     wolfSSL_SetIORecv(ssl, i2cwolf_receive);
     wolfSSL_SetIOSend(ssl, i2cwolf_send);
 
+    // insert wolfSSL_use_PrivateKey_buffer
+
     int verify_buffer = wolfSSL_CTX_load_verify_buffer_ex(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM, 0, 1);
     if(!verify_buffer) {
         #ifdef DEBUG
@@ -527,6 +531,10 @@ int main() {
         #endif
         return -1;
     }
+
+
+// insert wolfssl_use_certificate_buffer
+// wolfssl_set_verify: use WOLFSSL_VERIFY_PEER
 
     ssl = wolfSSL_new(ctx);
     if(!ssl) {
@@ -536,6 +544,8 @@ int main() {
         wolfSSL_CTX_free(ctx);
         return -1;
     }
+
+// use wolfssl_usekeyshare to specify ed25519
     
     unsigned char sendBuffer[5] = "Hello";
     // wolfSSL_write(ssl, sendt, 4);

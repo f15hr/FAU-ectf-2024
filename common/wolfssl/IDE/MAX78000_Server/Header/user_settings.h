@@ -64,7 +64,7 @@ extern "C" {
 
 /* Wolf Single Precision Math */
 #undef WOLFSSL_SP
-#if 0
+#if 1
     #define WOLFSSL_SP
     #define WOLFSSL_SP_SMALL      /* use smaller version of code */
     #define WOLFSSL_HAVE_SP_RSA
@@ -228,7 +228,7 @@ extern "C" {
 
 /* DH */
 #undef  NO_DH
-#if 1
+#if 0
     /* Use table for DH instead of -lm (math) lib dependency */
     #if 0
         #define WOLFSSL_DH_CONST
@@ -365,7 +365,7 @@ extern "C" {
 
 /* HKDF */
 #undef HAVE_HKDF
-#if 0
+#if 1
     #define HAVE_HKDF
 #endif
 
@@ -544,7 +544,7 @@ extern unsigned int get_random_trng(void);
 /* Enable Features */
 /* ------------------------------------------------------------------------- */
 #undef WOLFSSL_TLS13
-#if 0
+#if 1
     #define WOLFSSL_TLS13
 #endif
 
