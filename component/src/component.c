@@ -11,6 +11,25 @@
  * @copyright Copyright (c) 2024 The MITRE Corporation
  */
 
+#define PEM_CA "-----BEGIN CERTIFICATE-----" \
+"MIIC6TCCApugAwIBAgIBFDAFBgMrZXAwgZYxCzAJBgNVBAYTAkNBMQswCQYDVQQI" \
+"DAJPTjERMA8GA1UEBwwIV2F0ZXJsb28xFTATBgNVBAoMDHdvbGZTU0wgSW5jLjEU" \
+"MBIGA1UECwwLRW5naW5lZXJpbmcxGTAXBgNVBAMMEFJvb3QgQ2VydGlmaWNhdGUx" \
+"HzAdBgkqhkiG9w0BCQEWEHJvb3RAd29sZnNzbC5jb20wHhcNMjQwMjI0MDUzNjE1" \
+"WhcNMjYxMjE0MDUzNjE1WjCBljELMAkGA1UEBhMCQ0ExCzAJBgNVBAgMAk9OMREw" \
+"DwYDVQQHDAhXYXRlcmxvbzEVMBMGA1UECgwMd29sZlNTTCBJbmMuMRQwEgYDVQQL" \
+"DAtFbmdpbmVlcmluZzEZMBcGA1UEAwwQUm9vdCBDZXJ0aWZpY2F0ZTEfMB0GCSqG" \
+"SIb3DQEJARYQcm9vdEB3b2xmc3NsLmNvbTAqMAUGAytlcAMhAGqlvNErVHSjHkk9" \
+"7aboD3mac8WsJE1+0KU0kpPbTmxOo4IBCjCCAQYwHQYDVR0OBBYEFEx8TwqBrisI" \
+"nxACesQ3gXrw1k9fMIHDBgNVHSMEgbswgbiAFEx8TwqBrisInxACesQ3gXrw1k9f" \
+"oYGcpIGZMIGWMQswCQYDVQQGEwJDQTELMAkGA1UECAwCT04xETAPBgNVBAcMCFdh" \
+"dGVybG9vMRUwEwYDVQQKDAx3b2xmU1NMIEluYy4xFDASBgNVBAsMC0VuZ2luZWVy" \
+"aW5nMRkwFwYDVQQDDBBSb290IENlcnRpZmljYXRlMR8wHQYJKoZIhvcNAQkBFhBy" \
+"b290QHdvbGZzc2wuY29tggEUMA4GA1UdDwEB/wQEAwICBDAPBgNVHRMBAf8EBTAD" \
+"AQH/MAUGAytlcANBANT1Pxosh+0TxQS8ZAgi7RF7ZbaodRQ2dXG8QnsbNgovh19/" \
+"owFMEyT8jdUCXue7+3zUMI4rXf/ppyTGARGIkAA=" \
+"-----END CERTIFICATE-----" 
+
 #include "board.h"
 #include "i2c.h"
 #include "led.h"
@@ -225,6 +244,57 @@ int main(void) {
     board_link_init(addr);
     
     LED_On(LED2);
+
+     // test wolfSSL
+    WOLFSSL_CTX* ctx;
+    WOLFSSL* ssl;
+
+    ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method());
+    if(!ctx) {
+        #ifdef DEBUG
+        print_info("Failed to create WolfSSL CTX");
+        #endif
+        return -1;
+    }
+
+    uint8_t test[3] = {0};
+
+    // These functions set the callback on the *ctx level
+    wolfSSL_CTX_SetIOSend(ctx, i2cwolf_send);
+    wolfSSL_CTX_SetIORecv(ctx, i2cwolf_receive); 
+
+    // These functions setup the callback on the *ssl level
+    // wolfSSL_SetIORecv(ssl, i2cwolf_receive, test);
+    // wolfSSL_SetIOSend(ssl, i2cwolf_send);
+
+    // insert wolfSSL_use_PrivateKey_buffer
+
+    wolfSSL_CTX_use_PrivateKey_buffer(ctx, KEY_DEVICE, sizeof(KEY_DEVICE), SSL_FILETYPE_PEM);
+
+    int verify_buffer = wolfSSL_CTX_load_verify_buffer_ex(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM, 0, 1);
+    if(!verify_buffer) {
+        #ifdef DEBUG
+        print_info("Failed to create verufy buffer");
+        #endif
+        return -1;
+    }
+
+    wolfSSL_CTX_set_verify(ctx, WOLFSSL_VERIFY_NONE, NULL);
+
+// insert wolfssl_use_certificate_buffer
+// wolfssl_set_verify: use WOLFSSL_VERIFY_PEER
+
+    ssl = wolfSSL_new(ctx);
+    if(!ssl) {
+        #ifdef DEBUG
+        print_info("Failed to create WolfSSL object");
+        #endif
+        wolfSSL_CTX_free(ctx);
+        return -1;
+    }
+
+    int verify_accept = wolfSSL_accept(ssl);
+    
 
     while (1) {
         wait_and_receive_packet(receive_buffer);

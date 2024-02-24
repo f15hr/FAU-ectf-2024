@@ -11,6 +11,30 @@
  * @copyright Copyright (c) 2024 The MITRE Corporation
  */
 
+
+#define KEY_DEVICE "-----BEGIN PRIVATE KEY-----" \
+"MC4CAQAwBQYDK2VwBCIEICmOtj4Yw6NMvlyDApUivF3d2sXyr2WYQ+YFxOJS3COT" \
+"-----END PRIVATE KEY-----" 
+#define PEM_DEVICE "-----BEGIN CERTIFICATE-----" \
+"MIIDHTCCAs+gAwIBAgIBFTAFBgMrZXAwgZYxCzAJBgNVBAYTAkNBMQswCQYDVQQI" \
+"DAJPTjERMA8GA1UEBwwIV2F0ZXJsb28xFTATBgNVBAoMDHdvbGZTU0wgSW5jLjEU" \
+"MBIGA1UECwwLRW5naW5lZXJpbmcxGTAXBgNVBAMMEFJvb3QgQ2VydGlmaWNhdGUx" \
+"HzAdBgkqhkiG9w0BCQEWEHJvb3RAd29sZnNzbC5jb20wHhcNMjQwMjI0MjA0NzE5" \
+"WhcNMjUwMjIzMjA0NzE5WjCBmjELMAkGA1UEBhMCQ0ExCzAJBgNVBAgMAk9OMREw" \
+"DwYDVQQHDAhXYXRlcmxvbzEVMBMGA1UECgwMd29sZlNTTCBJbmMuMRQwEgYDVQQL" \
+"DAtFbmdpbmVlcmluZzEbMBkGA1UEAwwSRW50aXR5IENlcnRpZmljYXRlMSEwHwYJ" \
+"KoZIhvcNAQkBFhJlbnRpdHlAd29sZnNzbC5jb20wKjAFBgMrZXADIQDJQ9ulBC/X" \
+"DmqldxSBwMxz+Hx/d7x4srDhEjM40f7fq6OCATowggE2MA8GA1UdEQQIMAaHBH8A" \
+"AAEwHQYDVR0OBBYEFELwrWOk5Altgx5tngKi7031ofJEMIHDBgNVHSMEgbswgbiA" \
+"FEx8TwqBrisInxACesQ3gXrw1k9foYGcpIGZMIGWMQswCQYDVQQGEwJDQTELMAkG" \
+"A1UECAwCT04xETAPBgNVBAcMCFdhdGVybG9vMRUwEwYDVQQKDAx3b2xmU1NMIElu" \
+"Yy4xFDASBgNVBAsMC0VuZ2luZWVyaW5nMRkwFwYDVQQDDBBSb290IENlcnRpZmlj" \
+"YXRlMR8wHQYJKoZIhvcNAQkBFhByb290QHdvbGZzc2wuY29tggEUMA4GA1UdDwEB" \
+"/wQEAwIHgDAgBgNVHSUBAf8EFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDAYDVR0T" \
+"AQH/BAIwADAFBgMrZXADQQD5g7zg3nlOzodpA61z+L3DenKNEVXOtromQ/Pcu8aj" \
+"ef5Sg5Rb7te7Kv7DDsQuGJ46HxI6L6LVVKKvXGiJOSwF" \
+"-----END CERTIFICATE-----" 
+
 #include "board.h"
 #include "i2c.h"
 #include "icc.h"
@@ -516,13 +540,15 @@ int main() {
 
     // These functions set the callback on the *ctx level
     wolfSSL_CTX_SetIOSend(ctx, i2cwolf_send);
-    // wolfSSL_CTX_SetIORecv(ctx, i2cwolf_receive); 
+    wolfSSL_CTX_SetIORecv(ctx, i2cwolf_receive); 
 
     // These functions setup the callback on the *ssl level
     // wolfSSL_SetIORecv(ssl, i2cwolf_receive, test);
     // wolfSSL_SetIOSend(ssl, i2cwolf_send);
 
     // insert wolfSSL_use_PrivateKey_buffer
+
+    wolfSSL_CTX_use_PrivateKey_buffer(ctx, KEY_DEVICE, sizeof(KEY_DEVICE), SSL_FILETYPE_PEM);
 
     int verify_buffer = wolfSSL_CTX_load_verify_buffer_ex(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM, 0, 1);
     if(!verify_buffer) {
@@ -531,6 +557,8 @@ int main() {
         #endif
         return -1;
     }
+
+    wolfSSL_CTX_set_verify(ctx, WOLFSSL_VERIFY_NONE, NULL);
 
 
 // insert wolfssl_use_certificate_buffer
@@ -545,7 +573,15 @@ int main() {
         return -1;
     }
 
-    wolfSSL_SetIOWriteCtx(ssl, test);
+    // wolfSSL_SetIOWriteCtx(ssl, test);
+
+    int verify_connect = wolfSSL_connect(ssl);
+    if(!verify_connect) {
+        #ifdef DEBUG
+        print_info("Failed to connect");
+        #endif
+        return -1;
+    }
 
 // use wolfssl_usekeyshare to specify ed25519
     

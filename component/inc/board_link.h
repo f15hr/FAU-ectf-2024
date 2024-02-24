@@ -66,4 +66,26 @@ void send_packet_and_ack(uint8_t len, uint8_t* packet);
 */
 uint8_t wait_and_receive_packet(uint8_t* packet);
 
+/**
+ * @brief Send an arbitrary packet over I2C
+ * 
+ * @param address: i2c_addr_t, i2c address
+ * @param len: uint8_t, length of the packet
+ * @param packet: uint8_t*, pointer to packet to be sent
+ * 
+ * @return status: SUCCESS_RETURN if success, ERROR_RETURN if error
+ * Function sends an arbitrary packet over i2c to a specified component
+*/
+int send_packet(uint8_t len, uint8_t* packet);
+
+/**
+ * @brief Poll a component and receive a packet
+ * 
+ * @param address: i2c_addr_t, i2c address
+ * @param packet: uint8_t*, pointer to a buffer where a packet will be received 
+ * 
+ * @return int: size of data received, ERROR_RETURN if error
+*/
+// int poll_and_receive_packet(i2c_addr_t address, uint8_t* packet);
+
 #endif

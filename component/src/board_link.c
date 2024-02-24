@@ -57,6 +57,8 @@ void send_packet_and_ack(uint8_t len, uint8_t* packet) {
     I2C_REGS[RECEIVE_DONE][0] = false;
 }
 
+
+
 /**
  * @brief Wait for a new message from AP and process the message
  * 
@@ -72,4 +74,13 @@ uint8_t wait_and_receive_packet(uint8_t* packet) {
     memcpy(packet, (void*)I2C_REGS[RECEIVE], len);
 
     return len;
+}
+
+int send_packet(uint8_t len, uint8_t* packet) {
+
+    I2C_REGS[TRANSMIT_LEN][0] = len;
+    memcpy((void*)I2C_REGS[TRANSMIT], (void*)packet, len);
+    I2C_REGS[TRANSMIT_DONE][0] = false;
+
+    return 0;
 }
