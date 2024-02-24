@@ -515,12 +515,12 @@ int main() {
     uint8_t test[3] = {0};
 
     // These functions set the callback on the *ctx level
-    // wolfSSL_CTX_SetIOSend(ctx, i2cwolf_send);
+    wolfSSL_CTX_SetIOSend(ctx, i2cwolf_send);
     // wolfSSL_CTX_SetIORecv(ctx, i2cwolf_receive); 
 
     // These functions setup the callback on the *ssl level
-    wolfSSL_SetIORecv(ssl, i2cwolf_receive);
-    wolfSSL_SetIOSend(ssl, i2cwolf_send);
+    // wolfSSL_SetIORecv(ssl, i2cwolf_receive, test);
+    // wolfSSL_SetIOSend(ssl, i2cwolf_send);
 
     // insert wolfSSL_use_PrivateKey_buffer
 
@@ -544,6 +544,8 @@ int main() {
         wolfSSL_CTX_free(ctx);
         return -1;
     }
+
+    wolfSSL_SetIOWriteCtx(ssl, test);
 
 // use wolfssl_usekeyshare to specify ed25519
     
@@ -578,6 +580,25 @@ int main() {
         // Execute requested command
         if (!strcmp(buf, "list")) {
             scan_components();
+                // Send message
+            
+            // i2c_addr_t addr = component_id_to_i2c_addr(0x11111124);
+            // uint8_t transmit[5] = "hello";
+            // uint8_t receive[2] = {0};
+
+            // int result = send_packet(addr, sizeof(uint8_t), transmit);
+            // if (result == ERROR_RETURN) {
+            //     return ERROR_RETURN;
+            // }
+            
+            // // Receive message
+            // int len = poll_and_receive_packet(addr, receive);
+            // if (len == ERROR_RETURN) {
+            //     return ERROR_RETURN;
+            // }
+            
+            // print_info(receive);
+
         } else if (!strcmp(buf, "boot")) {
             attempt_boot();
         } else if (!strcmp(buf, "replace")) {

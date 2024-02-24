@@ -42,6 +42,9 @@
 #include <string.h>
 #endif
 
+#define print_info(...) printf("%%info: "); printf(__VA_ARGS__); printf("%%"); fflush(stdout)
+#define print_hex_info(...) printf("%%info: "); print_hex(__VA_ARGS__); printf("%%"); fflush(stdout)
+
 /********************************* CONSTANTS **********************************/
 
 // Passed in through ectf-params.h
@@ -225,6 +228,9 @@ int main(void) {
 
     while (1) {
         wait_and_receive_packet(receive_buffer);
+        // print_info(receive_buffer);
+        // uint8_t transmit_buffer[2] = "hi";
+        // send_packet_and_ack(sizeof(transmit_buffer), transmit_buffer);
 
         component_process_cmd();
     }
