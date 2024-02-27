@@ -5,24 +5,22 @@ print-%:
 
 ifeq ($(DEVICE), AP)
 WOLFSSL_DIR := $(abspath ../common/wolfssl/IDE/MAX78000_Client/)
-all:
-	cd ../common/openssl && python make_ssl_headers.py "AP" $(CURDIR)
+all: sslgen
 	-$(MAKE) -C $(WOLFSSL_DIR) WolfSSLStaticLib
 	$(MAKE) -f ./Makefile.maxim DEVICE=$(DEVICE)
 
 sslgen:
+	@bash ../common/openssl/ssl_gen_device.sh $(CURDIR)
 	cd ../common/openssl && python make_ssl_headers.py "AP" $(CURDIR)
 
 else ifeq ($(DEVICE), COMPONENT)
 WOLFSSL_DIR := $(abspath ../common/wolfssl/IDE/MAX78000_Server/)
-all:
-	@bash ../common/openssl/ssl_gen_server.sh $(CURDIR)
-	cd ../common/openssl && python make_ssl_headers.py "COMPONENT" $(CURDIR)
+all: sslgen
 	-$(MAKE) -C $(WOLFSSL_DIR) WolfSSLStaticLib
 	$(MAKE) -f ./Makefile.maxim DEVICE=$(DEVICE)
 
 sslgen:
-	@bash ../common/openssl/ssl_gen_server.sh $(CURDIR)
+	@bash ../common/openssl/ssl_gen_device.sh $(CURDIR)
 	cd ../common/openssl && python make_ssl_headers.py "COMPONENT" $(CURDIR)
 else 
 $(error ERROR: common.mk: Variable DEVICE with value $(DEVICE) is not valid!)

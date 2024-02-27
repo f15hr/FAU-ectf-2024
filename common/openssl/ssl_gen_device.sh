@@ -16,18 +16,18 @@ rm -f *.key
 rm -f *.csr
 rm -f *.pem
 
-# Generate root CA private key
+# Generate device key
 openssl genpkey -algorithm ed25519 -out device.key
 
 # Generate certificate signing requests (CSRs) for all devices
-openssl req -new -config ${COMMON}/openssl/openssl_server.conf -key device.key -out device.csr
+openssl req -new -config ${COMMON}/openssl/openssl_device.conf -key device.key -out device.csr
 
 # Sign the CSR, creating a certificate
 openssl x509 -req \
              -in device.csr \
              -CA ${DEPL}/certs/rootCA.pem \
              -CAkey ${DEPL}/certs/rootCA.key \
-             -extfile ${COMMON}/openssl/openssl_server.conf \
+             -extfile ${COMMON}/openssl/openssl_device.conf \
              -extensions x509v3_extensions \
              -set_serial 21 \
              -out device.pem \

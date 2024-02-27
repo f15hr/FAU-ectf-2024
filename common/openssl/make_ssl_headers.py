@@ -18,13 +18,11 @@ def write_certs_to_header(device: str, root_path: str):
     lines = []
     path_header = f"{root_path}/inc/secrets_{device.lower()}.h"
 
-    if device == "AP":
-        lines.append(txt_to_define(path_root_ca, 'PEM_CA'))
-    elif device == "COMPONENT":
-        path_key = f"{root_path}/build/certs/device.key"
-        path_pem = f"{root_path}/build/certs/device.pem"
-        lines.append(txt_to_define(path_key, 'KEY_DEVICE'))
-        lines.append(txt_to_define(path_pem, 'PEM_DEVICE'))
+    path_key = f"{root_path}/build/certs/device.key"
+    path_pem = f"{root_path}/build/certs/device.pem"
+    lines.append(txt_to_define(path_key, 'KEY_DEVICE'))
+    lines.append(txt_to_define(path_pem, 'PEM_DEVICE'))
+    lines.append(txt_to_define(path_root_ca, 'PEM_CA'))
 
     with open(path_header, 'w') as header:
         header.writelines(lines)
