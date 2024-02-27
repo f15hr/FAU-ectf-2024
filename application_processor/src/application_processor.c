@@ -154,6 +154,34 @@ int get_provisioned_ids(uint32_t* buffer) {
     return flash_status.component_cnt;
 }
 
+/**
+ * @brief Get Provisioned KEYs
+ * 
+ * @param uint32_t* buffer
+ * 
+ * Get the keys associated with the currently provisioned component IDs
+*/
+void get_provisioned_keys(char* buffer) {
+    char chunk[64] = {0};
+    char current_comp_byte; 
+    // uint8_t chunk1[16];
+    for(int i = 0; i < flash_status.component_cnt; i++) {
+        for(int j = 0; j < 4; j++) {
+            uint32_t current_comp = flash_status.component_ids[i];
+            current_comp_byte = (char) (((current_comp) >> (j*8)) & 0xFF);
+            char *temp = KEY(current_comp_byte+(j*256));
+            for (int k = 0; k < 16; k++) {
+                chunk[k + (j*16)] = temp[k];
+            }
+        }
+        for(int j = 0; j < 16; j++) {
+            buffer[j + (i*4)] = chunk[j] ^ chunk[j + 16] ^ chunk[j + 32] ^ chunk[j + 48];
+        }
+    }
+    // memcpy(buffer, flash_status.component_ids, flash_status.component_cnt * sizeof(uint32_t));
+    // return flash_status.component_cnt;
+}
+
 /********************************* UTILITIES **********************************/
 
 // Initialize the device
@@ -497,6 +525,9 @@ int main() {
 
     // Handle commands forever
     char buf[100];
+    char key_buf[16] = {0};
+    get_provisioned_keys(key_buf);
+    
     while (1) {
         recv_input("Enter Command: ", buf);
 
