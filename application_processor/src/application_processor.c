@@ -528,7 +528,7 @@ int main() {
     WOLFSSL_CTX* ctx;
     WOLFSSL* ssl;
 
-    ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method());
+    ctx = wolfSSL_CTX_new(wolfSSLv23_client_method());
     if(!ctx) {
         #ifdef DEBUG
         print_info("Failed to create WolfSSL CTX");
@@ -583,20 +583,6 @@ int main() {
         return -1;
     }
 
-// use wolfssl_usekeyshare to specify ed25519
-    
-    unsigned char sendBuffer[5] = "Hello";
-    // wolfSSL_write(ssl, sendt, 4);
-    int bytesSent = wolfSSL_write(ssl, sendBuffer, 5);
-    if(bytesSent <= 0) {
-        #ifdef DEBUG
-        print_info("Failed to send data");
-        #endif
-    } else {
-        #ifdef DEBUG
-        print_info("Successfuly sent data");
-        #endif
-    }
     // wolfSSL_CTX_SetIOSend();
     // wolfSSL_CTX_SetIOReceive();S
     

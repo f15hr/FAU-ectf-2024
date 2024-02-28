@@ -46,7 +46,9 @@ DEBUG = 1
 # https://www.wolfssl.com/how-do-i-manage-the-build-configuration-of-wolfssl/
 PROJ_CFLAGS += -DWOLFSSL_USER_SETTINGS -DHAVE_PK_CALLBACKS \
                -DWOLFSSL_USER_IO -DNO_WRITEV -DTIME_T_NOT_64BIT \
-			   -DWOLFSSL_LOAD_FLAG_DATE_ERR_OKAY
+			   -DWOLFSSL_LOAD_FLAG_DATE_ERR_OKAY 
+
+#-DLARGE_STATIC_BUFFERS
 
 # Enable "DEBUG" symbol in .c files
 ifeq ($(DEBUG), 1)
@@ -55,10 +57,10 @@ endif
 
 # Use client or server depending on the device
 ifeq ($(DEVICE), AP)
-USER_SETTINGS_DIR ?= $(abspath ../common/wolfssl/IDE/MAX78000_Client/Header)
+USER_SETTINGS_DIR = $(abspath ../common/wolfssl/IDE/MAX78000_Client/Header)
 PROJ_LDFLAGS += -L$(abspath ../common/wolfssl/IDE/MAX78000_Client/Build/)
 else ifeq ($(DEVICE), COMPONENT)
-USER_SETTINGS_DIR ?= $(abspath ../common/wolfssl/IDE/MAX78000_Server/Header)
+USER_SETTINGS_DIR = $(abspath ../common/wolfssl/IDE/MAX78000_Server/Header)
 PROJ_LDFLAGS += -L$(abspath ../common/wolfssl/IDE/MAX78000_Server/Build/)
 else
 $(error ERROR: common_project.mk: Variable DEVICE with value $(DEVICE) is not valid!)

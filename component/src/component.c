@@ -242,6 +242,11 @@ int main(void) {
     // Initialize Component
     i2c_addr_t addr = component_id_to_i2c_addr(COMPONENT_ID);
     board_link_init(addr);
+
+    MXC_TRNG_Init();
+
+    // Initialize WOLFSSL
+    int wfInitSuccess = wolfSSL_Init();
     
     LED_On(LED2);
 
@@ -249,7 +254,7 @@ int main(void) {
     WOLFSSL_CTX* ctx;
     WOLFSSL* ssl;
 
-    ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method());
+    ctx = wolfSSL_CTX_new(wolfSSLv23_server_method());
     if(!ctx) {
         #ifdef DEBUG
         print_info("Failed to create WolfSSL CTX");
@@ -270,6 +275,7 @@ int main(void) {
     // insert wolfSSL_use_PrivateKey_buffer
 
     wolfSSL_CTX_use_PrivateKey_buffer(ctx, KEY_DEVICE, sizeof(KEY_DEVICE), SSL_FILETYPE_PEM);
+    wolfSSL_CTX_use_certificate_buffer(ctx, PEM_DEVICE, sizeof(PEM_DEVICE), SSL_FILETYPE_PEM);
 
     int verify_buffer = wolfSSL_CTX_load_verify_buffer_ex(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM, 0, 1);
     if(!verify_buffer) {
@@ -294,6 +300,13 @@ int main(void) {
     }
 
     int verify_accept = wolfSSL_accept(ssl);
+    if (!verify_accept) {
+        #ifdef DEBUG
+        print_info("Failed to accept handshake");
+        #endif
+        wolfSSL_CTX_free(ctx);
+        return -1;
+    }
     
 
     while (1) {

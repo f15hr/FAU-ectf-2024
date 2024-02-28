@@ -44,6 +44,9 @@ extern "C" {
 #undef  WOLFSSL_USER_IO
 #define WOLFSSL_USER_IO
 
+// #define LARGE_STATIC_BUFFERS
+
+// #define WOLFSSL_STATIC_MEMORY
 
 /* ------------------------------------------------------------------------- */
 /* Math Configuration */
@@ -187,7 +190,7 @@ extern "C" {
 
     #ifdef HAVE_FIPS
         #undef  HAVE_ECC_CDH
-        #define HAVE_ECC_CDH /* Enable cofactor support */
+        #define HAVE_ECC_CDH /* Enable cofactor supposhart */
 
         #undef NO_STRICT_ECDSA_LEN
         #define NO_STRICT_ECDSA_LEN /* Do not force fixed len w/ FIPS */
@@ -251,7 +254,7 @@ extern "C" {
 #undef NO_AES
 #if 1
 	#undef  HAVE_AES_CBC
-	#define HAVE_AES_CBC
+	// #define HAVE_AES_CBC
 
 	#undef  HAVE_AESGCM
     #define HAVE_AESGCM
@@ -315,7 +318,7 @@ extern "C" {
 #undef NO_SHA
 #if 1
     /* 1k smaller, but 25% slower */
-    //#define USE_SLOW_SHA
+    #define USE_SLOW_SHA
 #else
     #define NO_SHA
 #endif
@@ -324,7 +327,7 @@ extern "C" {
 #undef NO_SHA256
 #if 1
     /* not unrolled - ~2k smaller and ~25% slower */
-    //#define USE_SLOW_SHA256
+    #define USE_SLOW_SHA256
 
     /* Sha224 */
     #if 0
@@ -544,7 +547,7 @@ extern unsigned int get_random_trng(void);
 /* Enable Features */
 /* ------------------------------------------------------------------------- */
 #undef WOLFSSL_TLS13
-#if 1
+#if 0
     #define WOLFSSL_TLS13
 #endif
 
@@ -652,6 +655,7 @@ extern unsigned int get_random_trng(void);
 #ifdef __cplusplus
 }
 #endif
+
 
 #endif /* WOLFSSL_USER_SETTINGS_H */
 

@@ -18,8 +18,8 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     int result = send_packet(addr, sz, buf);
 
     if (result == ERROR_RETURN) {
-        return 1;
+        return -1;
     }
     
-    return 0;
+    return sz;
 }

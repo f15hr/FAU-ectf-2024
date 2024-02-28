@@ -9,7 +9,7 @@ int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
 
     int len = wait_and_receive_packet(buf);
 
-    return sz;
+    return len;
 }
 
 int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
@@ -18,8 +18,8 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     int result = send_packet(sz, buf);
 
     if (result == ERROR_RETURN) {
-        return 1;
+        return -1;
     }
     
-    return 0;
+    return sz;
 }
