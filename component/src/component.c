@@ -96,7 +96,32 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * This function must be implemented by your team to align with the security requirements.
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
+    
     send_packet_and_ack(len, buffer); 
+}
+
+/**
+ * @brief Get Provisioned KEY
+ * 
+ * @param uint32_t* buffer
+ * 
+ * Get the keys associated with the currently provisioned component ID
+*/
+void get_provisioned_key(char* buffer) {
+    char chunk[64] = {0};
+    char current_comp_byte; 
+    // uint8_t chunk1[16];
+    for(int j = 0; j < 4; j++) {
+        uint32_t current_comp = COMPONENT_ID;
+        current_comp_byte = (char) (((current_comp) >> (j*8)) & 0xFF);
+        char *temp = KEY(current_comp_byte+(j*256));
+        for (int k = 0; k < 16; k++) {
+            chunk[k + (j*16)] = temp[k];
+        }
+    }
+    for(int j = 0; j < 16; j++) {
+        buffer[j] = chunk[j] ^ chunk[j + 16] ^ chunk[j + 32] ^ chunk[j + 48];
+    }
 }
 
 /**
@@ -215,6 +240,9 @@ int main(void) {
     board_link_init(addr);
     
     LED_On(LED2);
+
+    char key_buf[16] = {0};
+    get_provisioned_key(key_buf);
 
     while (1) {
         wait_and_receive_packet(receive_buffer);
