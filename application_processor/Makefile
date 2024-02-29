@@ -236,7 +236,7 @@ endif
 ifeq "$(MAKECMDGOALS)" "release"
 # Default optimization level for "release" builds (make release)
 MXC_OPTIMIZE_CFLAGS ?= -O2
-DEBUG = 0
+DEBUG = 1
 endif
 
 ifeq ($(DEBUG),1)
