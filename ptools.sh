@@ -41,6 +41,7 @@ cmp3_attest_date="10/10/10"
 cmp3_attest_cust="ATST_CUST3"
 
 if [ -z $(echo $IN_NIX_SHELL) ]; then
+    echo "Entering nix-shell, please run again once inside"
     nix-shell
 fi
 
@@ -219,6 +220,16 @@ elif [ $1 = "all" ]; then
         poetry run ectf_update \
         --infile "$cmp3_output_dir/$cmp3_output_name.img" \
         --port "/dev/$5" 
+    fi
+
+elif [ $1 = "openocd" ]; then
+    if [[ $(pidof -x openocd) ]]; then
+        echo "Killing all openocd instances"
+        pkill openocd
+    else 
+        openocd -f debug/device_ap.cfg > /dev/null 2>&1 & 
+        openocd -f debug/device_cmp1.cfg > /dev/null 2>&1 & 
+        openocd -f debug/device_cmp2.cfg > /dev/null 2>&1 & 
     fi
 
 else 
