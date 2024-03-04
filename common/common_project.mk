@@ -57,11 +57,15 @@ endif
 
 # Use client or server depending on the device
 ifeq ($(DEVICE), AP)
+
 USER_SETTINGS_DIR = $(abspath ../common/wolfssl/IDE/MAX78000_Client/Header)
 PROJ_LDFLAGS += -L$(abspath ../common/wolfssl/IDE/MAX78000_Client/Build/)
+
 else ifeq ($(DEVICE), COMPONENT)
+
 USER_SETTINGS_DIR = $(abspath ../common/wolfssl/IDE/MAX78000_Server/Header)
 PROJ_LDFLAGS += -L$(abspath ../common/wolfssl/IDE/MAX78000_Server/Build/)
+
 else
 $(error ERROR: common_project.mk: Variable DEVICE with value $(DEVICE) is not valid!)
 endif
@@ -71,8 +75,6 @@ IPATH += $(abspath ../common/wolfssl)
 IPATH += $(abspath ../common/)
 IPATH += $(abspath ../common/inc/)
 VPATH += $(abspath ../common/src/)
-
-
 PROJ_LIBS += :libwolfssl.a
 ############## END WOLFSSL CONFIGURATION ############## 
 

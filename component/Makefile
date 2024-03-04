@@ -1,2 +1,2 @@
-DEVICE := COMPONENT
+DEVICE = COMPONENT
 include $(abspath ../common/common.mk) 

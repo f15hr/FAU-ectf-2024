@@ -1,30 +1,29 @@
-.PHONY: all, release, clean, wolfssl, wolfclean, sslgen
+.PHONY: all, release, clean, wolfssl, wolfclean
+
+ifeq ($(DEVICE), AP)
+WOLFSSL_DIR = $(abspath ../common/wolfssl/IDE/MAX78000_Client/)
+SSLHEADER_FILE = $(abspath ../application_processor/inc/secrets_ap.h) 
+
+else ifeq ($(DEVICE), COMPONENT)
+WOLFSSL_DIR := $(abspath ../common/wolfssl/IDE/MAX78000_Server/)
+SSLHEADER_FILE = $(abspath ../component/inc/secrets_component.h)
+
+else 
+$(error ERROR: common.mk: Variable DEVICE with value $(DEVICE) is not valid!)
+endif
 
 print-%: 
 	$(MAKE) -f ./Makefile.maxim print-$*
 
-ifeq ($(DEVICE), AP)
-WOLFSSL_DIR := $(abspath ../common/wolfssl/IDE/MAX78000_Client/)
-all: sslgen
-	-$(MAKE) -C $(WOLFSSL_DIR) WolfSSLStaticLib
+all: $(WOLFSSL_DIR)/Build/libwolfssl.a $(SSLHEADER_FILE)
 	$(MAKE) -f ./Makefile.maxim DEVICE=$(DEVICE)
 
-sslgen:
-	@bash ../common/openssl/ssl_gen_device.sh $(CURDIR)
-	cd ../common/openssl && python make_ssl_headers.py "AP" $(CURDIR)
-
-else ifeq ($(DEVICE), COMPONENT)
-WOLFSSL_DIR := $(abspath ../common/wolfssl/IDE/MAX78000_Server/)
-all: sslgen
+$(WOLFSSL_DIR)/Build/libwolfssl.a:
 	-$(MAKE) -C $(WOLFSSL_DIR) WolfSSLStaticLib
-	$(MAKE) -f ./Makefile.maxim DEVICE=$(DEVICE)
 
-sslgen:
+$(SSLHEADER_FILE):
 	@bash ../common/openssl/ssl_gen_device.sh $(CURDIR)
-	cd ../common/openssl && python make_ssl_headers.py "COMPONENT" $(CURDIR)
-else 
-$(error ERROR: common.mk: Variable DEVICE with value $(DEVICE) is not valid!)
-endif
+	cd ../common/openssl && python make_ssl_headers.py "$(DEVICE)" $(CURDIR)
 
 release:
 	$(MAKE) -f ./Makefile.maxim release DEVICE=$(DEVICE)
