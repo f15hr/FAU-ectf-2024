@@ -504,6 +504,7 @@ int main() {
     WOLFSSL_CTX* ctx;
     WOLFSSL* ssl;
 
+    // TODO: Consider 1.3 only
     ctx = wolfSSL_CTX_new(wolfSSLv23_client_method());
     if(!ctx) {
         #ifdef DEBUG
@@ -534,6 +535,7 @@ int main() {
         return -1;
     }
 
+    // WOLFSSL_VERIFY_PEER
     wolfSSL_CTX_set_verify(ctx, WOLFSSL_VERIFY_NONE, NULL);
 
 
@@ -550,6 +552,8 @@ int main() {
     }
 
     // wolfSSL_SetIOWriteCtx(ssl, test);
+    // TODO: 'usekeyshare' api 
+
 
     int verify_connect = wolfSSL_connect(ssl);
     if(!verify_connect) {

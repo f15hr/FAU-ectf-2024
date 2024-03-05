@@ -6,7 +6,9 @@
 int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
 
     // i2c_addr_t addr = component_id_to_i2c_addr(0x11111124);
-
+    // 'sz' set by WolfSSL. We must process the buffer
+    // populated by i2c 'sz' bytes at a time each time
+    // this callback is called
     int len = wait_and_receive_packet(buf);
 
     return len;
