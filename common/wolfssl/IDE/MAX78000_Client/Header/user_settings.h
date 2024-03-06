@@ -547,7 +547,7 @@ extern unsigned int get_random_trng(void);
 /* Enable Features */
 /* ------------------------------------------------------------------------- */
 #undef WOLFSSL_TLS13
-#if 0
+#if 1
     #define WOLFSSL_TLS13
 #endif
 
