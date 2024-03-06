@@ -235,7 +235,7 @@ int main(void) {
     WOLFSSL_CTX* ctx;
     WOLFSSL* ssl;
 
-    ctx = wolfSSL_CTX_new(wolfSSLv23_server_method());
+    ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method());
     if(!ctx) {
         #ifdef DEBUG
         print_info("Failed to create WolfSSL CTX");
@@ -279,6 +279,12 @@ int main(void) {
         wolfSSL_CTX_free(ctx);
         return -1;
     }
+
+    tls13_buf tbuf[1];
+    XMEMSET(tbuf, 0, sizeof(tls13_buf));
+    
+    wolfSSL_SetIOReadCtx(ssl, tbuf);
+    wolfSSL_SetIOWriteCtx(ssl, tbuf);
 
     int verify_accept = wolfSSL_accept(ssl);
     if (!verify_accept) {
