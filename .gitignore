@@ -378,3 +378,4 @@ cython_debug/
 
 !device/lib
 msdk/
+documentation/.$WolfSSLdrawio.bkp

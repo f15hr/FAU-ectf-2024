@@ -7,29 +7,24 @@
 int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
 
     tls13_buf *tb = ctx;
-    int msg_length = 0;
 
-    // i2c_addr_t addr = component_id_to_i2c_addr(0x11111124);
-
-    if (tb->curr_index + sz <= tb->data_len) {
-        XMEMCPY(buf, tb->buf + tb->curr_index, sz);
-        tb->curr_index += sz;
-        return sz;
+    if (tb->curr_index == 0) {
+        XMEMSET(tb->buf, 0, MAX_RECORD_SIZE);
+        int len = poll_and_receive_packet(tb->addr, tb->buf);
+        if (len == ERROR_RETURN) {
+            return -1;
+        }
+        tb->data_len = len;
     }
 
-    msg_length = 0;
-    tb->curr_index = 0;
-    tb->data_len = 0;
-    XMEMSET(tb->buf, 0, MAX_RECORD_SIZE);
+    XMEMCPY(buf, tb->buf + tb->curr_index, sz);
+    tb->curr_index += sz;
 
-    int len = poll_and_receive_packet(tb->addr, tb->buf);
-    if (len == ERROR_RETURN) {
-        return -1;
-    }
-
-    XMEMCPY(buf, tb->buf, sz);
-    tb->data_len = msg_length;
-    tb->curr_index = sz;
+    // If the last portion of the buffer was just read,
+    // set the curr_index to 0 to reset the state.
+    if (tb->curr_index == tb->data_len) {
+        tb->curr_index = 0;
+    } 
 
     return sz;
 }
