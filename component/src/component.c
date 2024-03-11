@@ -261,7 +261,7 @@ int main(void) {
     int verify_buffer = wolfSSL_CTX_load_verify_buffer_ex(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM, 0, 1);
     if(!verify_buffer) {
         #ifdef DEBUG
-        print_info("Failed to create verufy buffer");
+        print_info("Failed to create verify buffer");
         #endif
         return -1;
     }

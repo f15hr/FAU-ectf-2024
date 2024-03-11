@@ -197,6 +197,7 @@ void init() {
 // Send a command to a component and receive the result
 int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
     // Send message
+    
     int result = send_packet(addr, sizeof(uint8_t), transmit);
     if (result == ERROR_RETURN) {
         return ERROR_RETURN;
@@ -488,6 +489,7 @@ void attempt_attest() {
     }
 }
 
+
 /*********************************** MAIN *************************************/
 
 int main() {
@@ -524,7 +526,16 @@ int main() {
 
     // insert wolfSSL_use_PrivateKey_buffer
 
+    int ret = 0;
+
     wolfSSL_CTX_use_PrivateKey_buffer(ctx, KEY_DEVICE, sizeof(KEY_DEVICE), SSL_FILETYPE_PEM);
+
+    // ret = wolfSSL_CTX_use_certificate_buffer(ctx, PEM_DEVICE,
+    // sizeof_serv_ecc_der_256, WOLFSSL_FILETYPE_ASN1);
+    // if (ret != WOLFSSL_SUCCESS) {
+    //     printf("error loading server certificate\n");
+    //     goto done;
+    // }
 
     int verify_buffer = wolfSSL_CTX_load_verify_buffer_ex(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM, 0, 1);
     if(!verify_buffer) {
