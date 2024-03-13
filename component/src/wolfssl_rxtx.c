@@ -115,7 +115,7 @@ WOLFSSL* ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf) {
     return ssl;
 }
 
-int ssl_accept(WOLFSSL *ssl) {
+int ssl_accept(WOLFSSL *ssl, tls13_buf tbuf) {
     int ret = 0;
     int err = 0;
 
@@ -130,6 +130,9 @@ int ssl_accept(WOLFSSL *ssl) {
         return -1;
     }
 
+    // Reset communication state
+    tbuf.curr_index = 0;
+    tbuf.data_len = 0;
     I2C_REGS[RECEIVE_DONE][0] = false;
     I2C_REGS[TRANSMIT_DONE][0] = true;
 
