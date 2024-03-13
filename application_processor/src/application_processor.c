@@ -511,7 +511,7 @@ int main() {
     tbuf = ssl_new_buf(0x11111124);
     ctx = ssl_new_context_client();
     ssl = ssl_new_session(ctx, tbuf);
-    ret = ssl_connect(ssl);
+    ret = ssl_connect(ssl, tbuf);
 
     tbuf->curr_index = 0;
     tbuf->data_len = 0;

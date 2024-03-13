@@ -241,11 +241,8 @@ int main(void) {
     tbuf = ssl_new_buf(0);
     ctx = ssl_new_context_server();
     ssl = ssl_new_session(ctx, tbuf);
-    ret = ssl_accept(ssl);
+    ret = ssl_accept(ssl, tbuf);
     // NOTE: must reset send/receive i2c registers at end of comm!
-
-    tbuf->curr_index = 0;
-    tbuf->data_len = 0;
 
     unsigned char echoBuffer[100];
 
