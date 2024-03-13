@@ -231,69 +231,36 @@ int main(void) {
     
     LED_On(LED2);
 
-     // test wolfSSL
+    // test wolfSSL
     WOLFSSL_CTX* ctx;
     WOLFSSL* ssl;
+    tls13_buf *tbuf;
+    int ret = 0;
+    int err = 0;
 
-    ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method());
-    if(!ctx) {
-        #ifdef DEBUG
-        print_info("Failed to create WolfSSL CTX");
-        #endif
-        return -1;
-    }
+    tbuf = ssl_new_buf(0);
+    ctx = ssl_new_context_server();
+    ssl = ssl_new_session(ctx, tbuf);
+    ret = ssl_accept(ssl);
+    // NOTE: must reset send/receive i2c registers at end of comm!
 
-    uint8_t test[3] = {0};
+    tbuf->curr_index = 0;
+    tbuf->data_len = 0;
 
-    // These functions set the callback on the *ctx level
-    wolfSSL_CTX_SetIOSend(ctx, i2cwolf_send);
-    wolfSSL_CTX_SetIORecv(ctx, i2cwolf_receive); 
+    unsigned char echoBuffer[100];
 
-    // These functions setup the callback on the *ssl level
-    // wolfSSL_SetIORecv(ssl, i2cwolf_receive, test);
-    // wolfSSL_SetIOSend(ssl, i2cwolf_send);
+    XMEMSET(echoBuffer, 0, sizeof(echoBuffer));
+    do {
+        ret = wolfSSL_read(ssl, echoBuffer, sizeof(echoBuffer)-1);
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    printf("Read (%d): %s\n", err, echoBuffer);
 
-    // insert wolfSSL_use_PrivateKey_buffer
-
-    wolfSSL_CTX_use_PrivateKey_buffer(ctx, KEY_DEVICE, sizeof(KEY_DEVICE), SSL_FILETYPE_PEM);
-    wolfSSL_CTX_use_certificate_buffer(ctx, PEM_DEVICE, sizeof(PEM_DEVICE), SSL_FILETYPE_PEM);
-
-    int verify_buffer = wolfSSL_CTX_load_verify_buffer_ex(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM, 0, 1);
-    if(!verify_buffer) {
-        #ifdef DEBUG
-        print_info("Failed to create verify buffer");
-        #endif
-        return -1;
-    }
-
-    wolfSSL_CTX_set_verify(ctx, WOLFSSL_VERIFY_NONE, NULL);
-
-// insert wolfssl_use_certificate_buffer
-// wolfssl_set_verify: use WOLFSSL_VERIFY_PEER
-
-    ssl = wolfSSL_new(ctx);
-    if(!ssl) {
-        #ifdef DEBUG
-        print_info("Failed to create WolfSSL object");
-        #endif
-        wolfSSL_CTX_free(ctx);
-        return -1;
-    }
-
-    tls13_buf tbuf[1];
-    XMEMSET(tbuf, 0, sizeof(tls13_buf));
-    
-    wolfSSL_SetIOReadCtx(ssl, tbuf);
-    wolfSSL_SetIOWriteCtx(ssl, tbuf);
-
-    int verify_accept = wolfSSL_accept(ssl);
-    if (!verify_accept) {
-        #ifdef DEBUG
-        print_info("Failed to accept handshake");
-        #endif
-        wolfSSL_CTX_free(ctx);
-        return -1;
-    }
+    do {
+        ret = wolfSSL_write(ssl, echoBuffer, XSTRLEN((char*)echoBuffer));
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    printf("Sent (%d): %s\n", err, echoBuffer);
     
 
     while (1) {
