@@ -54,6 +54,9 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
         i += MAX_I2C_MESSAGE_LEN-1;
     }
 
+    if (len == 0)
+        return ret;
+
     send_packet_and_ack(len, buf + i);
     
     return ret;

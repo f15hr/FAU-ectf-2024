@@ -59,6 +59,9 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
         i += MAX_I2C_MESSAGE_LEN-1;
     }
 
+    if (len == 0)
+        return ret;
+        
     int result = send_packet(tb->addr, len, buf + i);
     if (result == ERROR_RETURN) {
         ret = -1;
