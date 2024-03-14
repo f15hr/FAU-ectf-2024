@@ -63,7 +63,7 @@ extern "C" {
     #define TFM_TIMING_RESISTANT
 
     /* Optimizations */
-    //#define TFM_ARM
+    #define TFM_ARM
 #endif
 
 /* Wolf Single Precision Math */
@@ -71,8 +71,8 @@ extern "C" {
 #if 1
     #define WOLFSSL_SP
     #define WOLFSSL_SP_SMALL      /* use smaller version of code */
-    #define WOLFSSL_HAVE_SP_RSA
-    #define WOLFSSL_HAVE_SP_DH
+    // #define WOLFSSL_HAVE_SP_RSA
+    // #define WOLFSSL_HAVE_SP_DH
     #define WOLFSSL_HAVE_SP_ECC
     #define WOLFSSL_SP_MATH     /* only SP math - eliminates fast math code */
 
@@ -306,7 +306,7 @@ extern "C" {
     #define HAVE_ED25519 /* ED25519 Requires SHA512 */
 
     /* Optionally use small math (less flash usage, but much slower) */
-    #if 1
+    #if 0
         #define CURVED25519_SMALL
     #endif
 #endif
@@ -317,7 +317,7 @@ extern "C" {
 /* ------------------------------------------------------------------------- */
 /* Sha */
 #undef NO_SHA
-#if 1
+#if 0
     /* 1k smaller, but 25% slower */
     #define USE_SLOW_SHA
 #else
@@ -406,7 +406,7 @@ extern "C" {
 #if 0
     #define DEBUG_WOLFSSL
 #else
-    #if 0
+    #if 1
         #define NO_ERROR_STRINGS
     #endif
 #endif
