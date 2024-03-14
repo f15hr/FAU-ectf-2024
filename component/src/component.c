@@ -231,12 +231,18 @@ int main(void) {
     
     LED_On(LED2);
 
+
     // test wolfSSL
     WOLFSSL_CTX* ctx;
     WOLFSSL* ssl;
     tls13_buf *tbuf;
     int ret = 0;
     int err = 0;
+
+    // i2c speed test
+    // uint8_t testBuf[1024] = {0};
+    // tbuf = ssl_new_buf(0);
+    // i2cwolf_receive(ssl, testBuf, 1024, tbuf);
 
     tbuf = ssl_new_buf(0);
     ctx = ssl_new_context_server();

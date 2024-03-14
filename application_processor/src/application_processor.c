@@ -508,6 +508,11 @@ int main() {
     int ret = 0;
     int err = 0;
 
+    // i2c speed test
+    // uint8_t testBuf[1024] = {1};
+    // tbuf = ssl_new_buf(0x11111124);
+    // i2cwolf_send(ssl, testBuf, 1024, tbuf);
+
     tbuf = ssl_new_buf(0x11111124);
     ctx = ssl_new_context_client();
     ssl = ssl_new_session(ctx, tbuf);
