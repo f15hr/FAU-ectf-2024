@@ -19,5 +19,5 @@ tls13_buf* ssl_new_buf(uint32_t component_id);
 WOLFSSL_CTX* ssl_new_context_client();
 WOLFSSL_CTX* ssl_new_context_server();
 WOLFSSL* ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf);
-int ssl_connect(WOLFSSL *ssl, tls13_buf tbuf);
-int ssl_accept(WOLFSSL *ssl, tls13_buf tbuf);
+int ssl_connect(WOLFSSL *ssl, tls13_buf *tbuf);
+int ssl_accept(WOLFSSL *ssl, tls13_buf *tbuf);

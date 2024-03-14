@@ -121,7 +121,7 @@ WOLFSSL* ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf) {
     return ssl;
 }
 
-int ssl_connect(WOLFSSL *ssl, tls13_buf tbuf) {
+int ssl_connect(WOLFSSL *ssl, tls13_buf *tbuf) {
     int ret = 0;
     int err = 0;
     do {
@@ -136,8 +136,8 @@ int ssl_connect(WOLFSSL *ssl, tls13_buf tbuf) {
     }
 
     // Reset communication state
-    tbuf.curr_index = 0;
-    tbuf.data_len = 0;
+    tbuf->curr_index = 0;
+    tbuf->data_len = 0;
 
     return 0;
 }
