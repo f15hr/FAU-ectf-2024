@@ -38,7 +38,7 @@ ENTRY=firmware_startup
 CRYPTO_EXAMPLE=0
 
 
-DEBUG = 1
+DEBUG = 0
 
 ############## BEGIN WOLFSSL CONFIGURATION ############## 
 # wolfssl Flags

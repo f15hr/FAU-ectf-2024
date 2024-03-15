@@ -45,6 +45,10 @@
 #define print_info(...) printf("%%info: "); printf(__VA_ARGS__); printf("%%"); fflush(stdout)
 #define print_hex_info(...) printf("%%info: "); print_hex(__VA_ARGS__); printf("%%"); fflush(stdout)
 
+#define  ARM_CM_DEMCR      (*(uint32_t *)0xE000EDFC)
+#define  ARM_CM_DWT_CTRL   (*(uint32_t *)0xE0001000)
+#define  ARM_CM_DWT_CYCCNT (*(uint32_t *)0xE0001004)
+
 /********************************* CONSTANTS **********************************/
 
 // Passed in through ectf-params.h
@@ -240,15 +244,31 @@ int main(void) {
     int err = 0;
 
     // i2c speed test
-    // uint8_t testBuf[1024] = {0};
+    // uint8_t testBuf[8096] = {0};
     // tbuf = ssl_new_buf(0);
-    // i2cwolf_receive(ssl, testBuf, 1024, tbuf);
+    // i2cwolf_receive(ssl, testBuf, 8096, tbuf);
 
     tbuf = ssl_new_buf(0);
     ctx = ssl_new_context_server();
     ssl = ssl_new_session(ctx, tbuf);
+
+    if (ARM_CM_DWT_CTRL != 0) {        // See if DWT is available
+
+	          ARM_CM_DEMCR      |= 1 << 24;  // Set bit 24
+	          ARM_CM_DWT_CYCCNT  = 0;
+	          ARM_CM_DWT_CTRL   |= 1 << 0;   // Set bit 0
+
+	      }
+    
+    volatile uint32_t start_cc = ARM_CM_DWT_CYCCNT;
+
+    MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
+
     ret = ssl_accept(ssl, tbuf);
+    printf("Handshake finished");
     // NOTE: must reset send/receive i2c registers at end of comm!
+
+    volatile uint32_t end_cc = ARM_CM_DWT_CYCCNT;
 
     unsigned char echoBuffer[100];
 

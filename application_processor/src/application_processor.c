@@ -65,6 +65,10 @@
 #define SUCCESS_RETURN 0
 #define ERROR_RETURN -1
 
+#define  ARM_CM_DEMCR      (*(uint32_t *)0xE000EDFC)
+#define  ARM_CM_DWT_CTRL   (*(uint32_t *)0xE0001000)
+#define  ARM_CM_DWT_CYCCNT (*(uint32_t *)0xE0001004)
+
 /******************************** TYPE DEFINITIONS ********************************/
 // Data structure for sending commands to component
 // Params allows for up to MAX_I2C_MESSAGE_LEN - 1 bytes to be send
@@ -501,6 +505,18 @@ int main() {
 
     volatile unsigned int rng_test = get_random_trng();
 
+    volatile uint32_t clk_src = (MXC_GCR->clkctrl & MXC_F_GCR_CLKCTRL_SYSCLK_SEL);
+    volatile uint32_t ipo = MXC_S_GCR_CLKCTRL_SYSCLK_SEL_IPO;
+
+    // Systick regs
+    int *STCSR = (int *)0xE000E010;                    
+    int *STRVR = (int *)0xE000E014;              
+    int *STCVR = (int *)0xE000E018;
+    // Configure Systick    
+    *STRVR = 0xFFFFFF;  // max count
+    *STCVR = 0;         // force a re-load of the counter value register
+    *STCSR = 5;         // enable FCLK count without interrupt
+
     // test wolfSSL
     WOLFSSL_CTX* ctx;
     WOLFSSL* ssl;
@@ -509,14 +525,38 @@ int main() {
     int err = 0;
 
     // i2c speed test
-    // uint8_t testBuf[1024] = {1};
+    // uint8_t testBuf[8096] = {1};
     // tbuf = ssl_new_buf(0x11111124);
-    // i2cwolf_send(ssl, testBuf, 1024, tbuf);
+    // i2cwolf_send(ssl, testBuf, 8096, tbuf);
 
     tbuf = ssl_new_buf(0x11111124);
     ctx = ssl_new_context_client();
     ssl = ssl_new_session(ctx, tbuf);
+
+        
+    // if (ARM_CM_DWT_CTRL != 0) {        // See if DWT is available
+
+	//           ARM_CM_DEMCR      |= 1 << 24;  // Set bit 24
+	//           ARM_CM_DWT_CYCCNT  = 0;
+	//           ARM_CM_DWT_CTRL   |= 1 << 0;   // Set bit 0
+
+	//       }
+    
+    // volatile uint32_t start_cc = ARM_CM_DWT_CYCCNT;
+
+    MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
+
+    volatile int start_cc = *STCVR;
+
     ret = ssl_connect(ssl, tbuf);
+
+    volatile int end_cc = *STCVR;
+
+    printf("%d", start_cc = end_cc);
+
+
+    printf("Handshake finished");
+    // volatile uint32_t end_cc = ARM_CM_DWT_CYCCNT;
 
     tbuf->curr_index = 0;
     tbuf->data_len = 0;
