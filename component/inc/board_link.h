@@ -52,7 +52,7 @@ i2c_addr_t component_id_to_i2c_addr(uint32_t component_id);
  * This function utilizes the simple_i2c_peripheral library to
  * send a packet to the AP and wait for the message to be received
 */
-void send_packet_and_ack(uint8_t len, uint8_t* packet);
+void send_packet_and_ack(uint16_t len, uint8_t* packet);
 
 /**
  * @brief Wait for a new message from AP and process the message
@@ -65,5 +65,27 @@ void send_packet_and_ack(uint8_t len, uint8_t* packet);
  * once the message is available it is returned in the buffer pointer to by packet 
 */
 uint8_t wait_and_receive_packet(uint8_t* packet);
+
+/**
+ * @brief Send an arbitrary packet over I2C
+ * 
+ * @param address: i2c_addr_t, i2c address
+ * @param len: uint8_t, length of the packet
+ * @param packet: uint8_t*, pointer to packet to be sent
+ * 
+ * @return status: SUCCESS_RETURN if success, ERROR_RETURN if error
+ * Function sends an arbitrary packet over i2c to a specified component
+*/
+int send_packet(uint8_t len, uint8_t* packet);
+
+/**
+ * @brief Poll a component and receive a packet
+ * 
+ * @param address: i2c_addr_t, i2c address
+ * @param packet: uint8_t*, pointer to a buffer where a packet will be received 
+ * 
+ * @return int: size of data received, ERROR_RETURN if error
+*/
+// int poll_and_receive_packet(i2c_addr_t address, uint8_t* packet);
 
 #endif

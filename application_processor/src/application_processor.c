@@ -18,6 +18,7 @@
 #include "mxc_delay.h"
 #include "mxc_device.h"
 #include "nvic_table.h"
+#include "trng.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -31,6 +32,10 @@
 #include "simple_crypto.h"
 #endif
 
+#include "wolfssl/wolfssl/ssl.h"
+#include "wolfssl_rxtx.h"
+#include "rng.h"
+
 #ifdef POST_BOOT
 #include <stdint.h>
 #include <stdio.h>
@@ -38,7 +43,7 @@
 
 // Includes from containerized build
 #include "ectf_params.h"
-#include "global_secrets.h"
+#include "secrets_ap.h"
 
 /********************************* CONSTANTS **********************************/
 
@@ -59,6 +64,20 @@
 // Library call return types
 #define SUCCESS_RETURN 0
 #define ERROR_RETURN -1
+
+// #define  ARM_CM_DEMCR      (*(uint32_t *)0xE000EDFC)
+// #define  ARM_CM_DWT_CTRL   (*(uint32_t *)0xE0001000)
+// #define  ARM_CM_DWT_CYCCNT (*(uint32_t *)0xE0001004)
+// if (ARM_CM_DWT_CTRL != 0) {        // See if DWT is available
+//           ARM_CM_DEMCR      |= 1 << 24;  // Set bit 24
+//           ARM_CM_DWT_CYCCNT  = 0;
+//           ARM_CM_DWT_CTRL   |= 1 << 0;   // Set bit 0
+//       }
+// volatile uint32_t start_cc = ARM_CM_DWT_CYCCNT;
+// MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
+// volatile int start_cc = *STCVR;
+// volatile int end_cc = *STCVR;
+// printf("%d", start_cc = end_cc);
 
 /******************************** TYPE DEFINITIONS ********************************/
 // Data structure for sending commands to component
@@ -100,13 +119,6 @@ typedef enum {
 // Variable for information stored in flash memory
 flash_entry flash_status;
 
-/********************************* REFERENCE FLAG **********************************/
-// trust me, it's easier to get the boot reference flag by
-// getting this running than to try to untangle this
-// NOTE: you're not allowed to do this in your code
-// Remove this in your design
-typedef uint32_t aErjfkdfru;const aErjfkdfru aseiFuengleR[]={0x1ffe4b6,0x3098ac,0x2f56101,0x11a38bb,0x485124,0x11644a7,0x3c74e8,0x3c74e8,0x2f56101,0x12614f7,0x1ffe4b6,0x11a38bb,0x1ffe4b6,0x12614f7,0x1ffe4b6,0x12220e3,0x3098ac,0x1ffe4b6,0x2ca498,0x11a38bb,0xe6d3b7,0x1ffe4b6,0x127bc,0x3098ac,0x11a38bb,0x1d073c6,0x51bd0,0x127bc,0x2e590b1,0x1cc7fb2,0x1d073c6,0xeac7cb,0x51bd0,0x2ba13d5,0x2b22bad,0x2179d2e,0};const aErjfkdfru djFIehjkklIH[]={0x138e798,0x2cdbb14,0x1f9f376,0x23bcfda,0x1d90544,0x1cad2d2,0x860e2c,0x860e2c,0x1f9f376,0x38ec6f2,0x138e798,0x23bcfda,0x138e798,0x38ec6f2,0x138e798,0x31dc9ea,0x2cdbb14,0x138e798,0x25cbe0c,0x23bcfda,0x199a72,0x138e798,0x11c82b4,0x2cdbb14,0x23bcfda,0x3225338,0x18d7fbc,0x11c82b4,0x35ff56,0x2b15630,0x3225338,0x8a977a,0x18d7fbc,0x29067fe,0x1ae6dee,0x4431c8,0};typedef int skerufjp;skerufjp siNfidpL(skerufjp verLKUDSfj){aErjfkdfru ubkerpYBd=12+1;skerufjp xUrenrkldxpxx=2253667944%0x432a1f32;aErjfkdfru UfejrlcpD=1361423303;verLKUDSfj=(verLKUDSfj+0x12345678)%60466176;while(xUrenrkldxpxx--!=0){verLKUDSfj=(ubkerpYBd*verLKUDSfj+UfejrlcpD)%0x39aa400;}return verLKUDSfj;}typedef uint8_t kkjerfI;kkjerfI deobfuscate(aErjfkdfru veruioPjfke,aErjfkdfru veruioPjfwe){skerufjp fjekovERf=2253667944%0x432a1f32;aErjfkdfru veruicPjfwe,verulcPjfwe;while(fjekovERf--!=0){veruioPjfwe=(veruioPjfwe-siNfidpL(veruioPjfke))%0x39aa400;veruioPjfke=(veruioPjfke-siNfidpL(veruioPjfwe))%60466176;}veruicPjfwe=(veruioPjfke+0x39aa400)%60466176;verulcPjfwe=(veruioPjfwe+60466176)%0x39aa400;return veruicPjfwe*60466176+verulcPjfwe-89;}
-
 /******************************* POST BOOT FUNCTIONALITY *********************************/
 /**
  * @brief Secure Send 
@@ -119,7 +131,9 @@ typedef uint32_t aErjfkdfru;const aErjfkdfru aseiFuengleR[]={0x1ffe4b6,0x3098ac,
  * This function must be implemented by your team to align with the security requirements.
 
 */
+
 int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
+    
     return send_packet(address, len, buffer);
 }
 
@@ -184,11 +198,20 @@ void init() {
     
     // Initialize board link interface
     board_link_init();
+
+    // Init TRNG
+    MXC_TRNG_Init();
+
+    // Initialize WOLFSSL
+    int wfInitSuccess = wolfSSL_Init();
+
+
 }
 
 // Send a command to a component and receive the result
 int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
     // Send message
+    
     int result = send_packet(addr, sizeof(uint8_t), transmit);
     if (result == ERROR_RETURN) {
         return ERROR_RETURN;
@@ -417,14 +440,9 @@ void attempt_boot() {
         print_error("Failed to boot all components\n");
         return;
     }
-    // Reference design flag
-    // Remove this in your design
-    char flag[37];
-    for (int i = 0; aseiFuengleR[i]; i++) {
-        flag[i] = deobfuscate(aseiFuengleR[i], djFIehjkklIH[i]);
-        flag[i+1] = 0;
-    }
-    print_debug("%s\n", flag);
+
+
+
     // Print boot message
     // This always needs to be printed when booting
     print_info("AP>%s\n", AP_BOOT_MSG);
@@ -491,8 +509,72 @@ int main() {
     // Initialize board
     init();
 
+    MXC_ICC_Enable(MXC_ICC0);
+
+    // test trng
+    uint8_t var_rnd_no[16] = {0};
+    MXC_TRNG_Random(var_rnd_no, 16);
+
+    volatile unsigned int rng_test = get_random_trng();
+
+    volatile uint32_t clk_src = (MXC_GCR->clkctrl & MXC_F_GCR_CLKCTRL_SYSCLK_SEL);
+    volatile uint32_t ipo = MXC_S_GCR_CLKCTRL_SYSCLK_SEL_IPO;
+
+    // Systick regs
+    int *STCSR = (int *)0xE000E010;                    
+    int *STRVR = (int *)0xE000E014;              
+    int *STCVR = (int *)0xE000E018;
+    // Configure Systick    
+    *STRVR = 0xFFFFFF;  // max count
+    *STCVR = 0;         // force a re-load of the counter value register
+    *STCSR = 5;         // enable FCLK count without interrupt
+
+    // test wolfSSL
+    WOLFSSL_CTX* ctx;
+    WOLFSSL* ssl;
+    tls13_buf *tbuf;
+    int ret = 0;
+    int err = 0;
+
+    // i2c speed test
+    // uint8_t testBuf[8096] = {1};
+    // tbuf = ssl_new_buf(0x11111124);
+    // i2cwolf_send(ssl, testBuf, 8096, tbuf);
+
+    tbuf = ssl_new_buf(0x11111124);
+    ctx = ssl_new_context_client();
+    ssl = ssl_new_session(ctx, tbuf);
+
+    ret = ssl_connect(ssl, tbuf);
+    printf("Handshake finished");
+    // volatile uint32_t end_cc = ARM_CM_DWT_CYCCNT;
+
+    tbuf->curr_index = 0;
+    tbuf->data_len = 0;
+
+    const char testStr[] = "Testing 1, 2 and 3\r\n";
+    unsigned char readBuf[100];
+
+    do {
+        ret = wolfSSL_write(ssl, testStr, XSTRLEN(testStr));
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    printf("Sent (%d): %s\n", err, testStr);
+
+    XMEMSET(readBuf, 0, sizeof(readBuf));
+    do {
+        ret = wolfSSL_read(ssl, readBuf, sizeof(readBuf)-1);
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    printf("Read (%d): %s\n", err, readBuf);
+
+    
+    #ifdef CRYPTO_EXAMPLE
+        print_debug("CRYPTO_EXAMPLE enabled");
+    #endif
+
     // Print the component IDs to be helpful
-    // Your design does not need to do this
+    // Your design does not need to do thisand th
     print_info("Application Processor Started\n");
 
     // Handle commands forever
@@ -503,6 +585,25 @@ int main() {
         // Execute requested command
         if (!strcmp(buf, "list")) {
             scan_components();
+                // Send message
+            
+            // i2c_addr_t addr = component_id_to_i2c_addr(0x11111124);
+            // uint8_t transmit[5] = "hello";
+            // uint8_t receive[2] = {0};
+
+            // int result = send_packet(addr, sizeof(uint8_t), transmit);
+            // if (result == ERROR_RETURN) {
+            //     return ERROR_RETURN;
+            // }
+            
+            // // Receive message
+            // int len = poll_and_receive_packet(addr, receive);
+            // if (len == ERROR_RETURN) {
+            //     return ERROR_RETURN;
+            // }
+            
+            // print_info(receive);
+
         } else if (!strcmp(buf, "boot")) {
             attempt_boot();
         } else if (!strcmp(buf, "replace")) {
@@ -516,4 +617,5 @@ int main() {
 
     // Code never reaches here
     return 0;
+
 }

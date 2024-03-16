@@ -17,6 +17,8 @@
 #include "mxc_delay.h"
 #include "mxc_errors.h"
 #include "nvic_table.h"
+#include "trng.h"
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,9 +26,14 @@
 #include "simple_i2c_peripheral.h"
 #include "board_link.h"
 
+#include "wolfssl/wolfssl/ssl.h"
+#include "wolfssl_rxtx.h"
+#include "rng.h"
+
 // Includes from containerized build
 #include "ectf_params.h"
-#include "global_secrets.h"
+
+#include "secrets_component.h"
 
 #ifdef POST_BOOT
 #include "led.h"
@@ -34,6 +41,13 @@
 #include <stdio.h>
 #include <string.h>
 #endif
+
+#define print_info(...) printf("%%info: "); printf(__VA_ARGS__); printf("%%"); fflush(stdout)
+#define print_hex_info(...) printf("%%info: "); print_hex(__VA_ARGS__); printf("%%"); fflush(stdout)
+
+#define  ARM_CM_DEMCR      (*(uint32_t *)0xE000EDFC)
+#define  ARM_CM_DWT_CTRL   (*(uint32_t *)0xE0001000)
+#define  ARM_CM_DWT_CYCCNT (*(uint32_t *)0xE0001004)
 
 /********************************* CONSTANTS **********************************/
 
@@ -213,11 +227,70 @@ int main(void) {
     // Initialize Component
     i2c_addr_t addr = component_id_to_i2c_addr(COMPONENT_ID);
     board_link_init(addr);
+
+    MXC_TRNG_Init();
+
+    // Initialize WOLFSSL
+    int wfInitSuccess = wolfSSL_Init();
     
     LED_On(LED2);
 
+
+    // test wolfSSL
+    WOLFSSL_CTX* ctx;
+    WOLFSSL* ssl;
+    tls13_buf *tbuf;
+    int ret = 0;
+    int err = 0;
+
+    // i2c speed test
+    // uint8_t testBuf[8096] = {0};
+    // tbuf = ssl_new_buf(0);
+    // i2cwolf_receive(ssl, testBuf, 8096, tbuf);
+
+    tbuf = ssl_new_buf(0);
+    ctx = ssl_new_context_server();
+    ssl = ssl_new_session(ctx, tbuf);
+
+    if (ARM_CM_DWT_CTRL != 0) {        // See if DWT is available
+
+	          ARM_CM_DEMCR      |= 1 << 24;  // Set bit 24
+	          ARM_CM_DWT_CYCCNT  = 0;
+	          ARM_CM_DWT_CTRL   |= 1 << 0;   // Set bit 0
+
+	      }
+    
+    volatile uint32_t start_cc = ARM_CM_DWT_CYCCNT;
+
+    MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
+
+    ret = ssl_accept(ssl, tbuf);
+    printf("Handshake finished");
+    // NOTE: must reset send/receive i2c registers at end of comm!
+
+    volatile uint32_t end_cc = ARM_CM_DWT_CYCCNT;
+
+    unsigned char echoBuffer[100];
+
+    XMEMSET(echoBuffer, 0, sizeof(echoBuffer));
+    do {
+        ret = wolfSSL_read(ssl, echoBuffer, sizeof(echoBuffer)-1);
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    printf("Read (%d): %s\n", err, echoBuffer);
+
+    do {
+        ret = wolfSSL_write(ssl, echoBuffer, XSTRLEN((char*)echoBuffer));
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    printf("Sent (%d): %s\n", err, echoBuffer);
+    
+
     while (1) {
         wait_and_receive_packet(receive_buffer);
+        // print_info(receive_buffer);
+        // uint8_t transmit_buffer[2] = "hi";
+        // send_packet_and_ack(sizeof(transmit_buffer), transmit_buffer);
 
         component_process_cmd();
     }

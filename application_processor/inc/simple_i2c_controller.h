@@ -24,7 +24,7 @@
 
 /******************************** MACRO DEFINITIONS ********************************/
 // I2C frequency in HZ
-#define I2C_FREQ 100000
+#define I2C_FREQ 1000000
 // Physical I2C interface
 #define I2C_INTERFACE MXC_I2C1
 // Last register for out-of-bounds checking

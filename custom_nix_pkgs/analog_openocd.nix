@@ -66,6 +66,7 @@ stdenv.mkDerivation {
   '';
 
   enableParallelBuilding = true;
+  hardeningDisable = ["fortify"];
 
   hardeningDisable = [ "fortify" ];
 

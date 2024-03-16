@@ -3,8 +3,19 @@
 .DS_Store
 .vscode/
 **/gcc
+deployment/certs/*
+**/build/certs
+*.drawio.bkp
+secrets_*
+*.pem
+*.key
+*.crt
+*.csr
 
 !device/lib
+
+*.disasm
+*.sym
 
 ## Begin Generic .gitignore ##
 
@@ -367,3 +378,4 @@ cython_debug/
 
 !device/lib
 msdk/
+documentation/.$WolfSSLdrawio.bkp
