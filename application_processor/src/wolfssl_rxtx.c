@@ -1,5 +1,6 @@
 #include "board_link.h"
 #include "wolfssl_rxtx.h"
+#include "icc.h"
 #include "secrets_ap.h"
 #include "wolfssl/wolfssl/ssl.h"
 #include "host_messaging.h"
@@ -127,6 +128,9 @@ WOLFSSL* ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf) {
 int ssl_connect(WOLFSSL *ssl, tls13_buf *tbuf) {
     int ret = 0;
     int err = 0;
+
+    // MXC_ICC_Enable(MXC_ICC0);
+
     do {
         ret = wolfSSL_connect(ssl);
         err = wolfSSL_get_error(ssl, ret);
@@ -137,6 +141,8 @@ int ssl_connect(WOLFSSL *ssl, tls13_buf *tbuf) {
         #endif
         return -1;
     }
+
+    // MXC_ICC_Disable(MXC_ICC0);
 
     // Reset communication state
     tbuf->curr_index = 0;
