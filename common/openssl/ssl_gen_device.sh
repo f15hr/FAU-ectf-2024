@@ -17,7 +17,8 @@ rm -f *.csr
 rm -f *.pem
 
 # Generate device key
-openssl genpkey -algorithm ed25519 -out device.key
+# openssl genpkey -algorithm ed25519 -out device.key
+openssl ecparam -genkey -out device.key -name prime256v1
 
 # Generate certificate signing requests (CSRs) for all devices
 openssl req -new -config ${COMMON}/openssl/openssl_device.conf -key device.key -out device.csr

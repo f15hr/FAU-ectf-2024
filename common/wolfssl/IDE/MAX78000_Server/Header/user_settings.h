@@ -303,7 +303,7 @@ extern "C" {
 #undef HAVE_ED25519
 #if 1
     #define HAVE_CURVE25519
-    #define HAVE_ED25519 /* ED25519 Requires SHA512 */
+    // #define HAVE_ED25519 /* ED25519 Requires SHA512 */
 
     /* Optionally use small math (less flash usage, but much slower) */
     #if 0
@@ -340,7 +340,7 @@ extern "C" {
 
 /* Sha512 */
 #undef WOLFSSL_SHA512
-#if 1
+#if 0
     #define WOLFSSL_SHA512
 
     /* Sha384 */
@@ -657,5 +657,12 @@ extern unsigned int get_random_trng(void);
 }
 #endif
 
+// #define WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY 1
+#define NO_ASN_TIME
+// #define XTIME
+
 #endif /* WOLFSSL_USER_SETTINGS_H */
+
+
+
 

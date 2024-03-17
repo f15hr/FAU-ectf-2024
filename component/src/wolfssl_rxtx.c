@@ -87,7 +87,17 @@ WOLFSSL_CTX* ssl_new_context_server() {
     wolfSSL_CTX_use_PrivateKey_buffer(ctx, KEY_DEVICE, sizeof(KEY_DEVICE), SSL_FILETYPE_PEM);
     wolfSSL_CTX_use_certificate_buffer(ctx, PEM_DEVICE, sizeof(PEM_DEVICE), SSL_FILETYPE_PEM);
 
-    int verify_buffer = wolfSSL_CTX_load_verify_buffer_ex(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM, 0, 1);
+    int cipherlist = wolfSSL_CTX_set_cipher_list(ctx, "TLS13-AES128-GCM-SHA256");
+    if(cipherlist != WOLFSSL_SUCCESS) {
+        #ifdef DEBUG
+        printf("Failed to set cipher list");
+        #endif
+        return NULL;
+    }
+
+    // int verify_buffer = wolfSSL_CTX_load_verify_buffer_ex(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM, 0, 1);
+    int verify_buffer = wolfSSL_CTX_load_verify_buffer(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM);
+    
     if(verify_buffer != WOLFSSL_SUCCESS) {
         #ifdef DEBUG
         printf("Failed to create verufy buffer");
@@ -95,7 +105,7 @@ WOLFSSL_CTX* ssl_new_context_server() {
         return NULL;
     }
 
-    wolfSSL_CTX_set_verify(ctx, WOLFSSL_VERIFY_NONE, NULL);
+    wolfSSL_CTX_set_verify(ctx, WOLFSSL_VERIFY_CLIENT_ONCE, NULL);
 
     return ctx;
 }

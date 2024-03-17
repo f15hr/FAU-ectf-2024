@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"ssl.h": "c",
+			"board_link.h": "c"
+		},
+		"cortex-debug.variableUseNaturalFormat": true
+	}
+}

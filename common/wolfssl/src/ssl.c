@@ -15714,7 +15714,7 @@ int wolfSSL_set_compression(WOLFSSL* ssl)
 
         verify = GET_VERIFY_SETTING_CTX(ctx);
         // TODO: FIX THIS
-        verify = VERIFY_SKIP_DATE;
+        // verify = VERIFY_SKIP_DATE;
         if (flags & WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY)
             verify = VERIFY_SKIP_DATE;
 
