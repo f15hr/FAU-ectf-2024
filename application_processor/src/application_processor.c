@@ -132,9 +132,26 @@ flash_entry flash_status;
 
 */
 
-int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
-    
-    return send_packet(address, len, buffer);
+int __attribute__((noinline)) secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
+    uint8_t buf[MAX_I2C_MESSAGE_LEN] = {0};
+    int ret = 0;
+    int err = 0;
+
+    XMEMCPY(buf, buffer, len);
+
+    tls13_buf *tbuf = ssl_new_buf(address);
+    WOLFSSL_CTX *ctx = ssl_new_context_client();
+    WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
+    ret = ssl_handshake_client(ssl, tbuf);
+
+    do {
+        ret = wolfSSL_write(ssl, buf, MAX_I2C_MESSAGE_LEN-1);
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+
+    ssl_free_all(ctx, ssl, tbuf);
+
+    return ret;
 }
 
 /**
@@ -148,8 +165,31 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
  * Securely receive data over I2C. This function is utilized in POST_BOOT functionality.
  * This function must be implemented by your team to align with the security requirements.
 */
-int secure_receive(i2c_addr_t address, uint8_t* buffer) {
-    return poll_and_receive_packet(address, buffer);
+int __attribute__((noinline)) secure_receive(i2c_addr_t address, uint8_t* buffer) {
+    uint8_t buf[MAX_I2C_MESSAGE_LEN] = {0};
+    int ret = 0;
+    int err = 0;
+
+    tls13_buf *tbuf = ssl_new_buf(address);
+    WOLFSSL_CTX *ctx = ssl_new_context_client();
+    WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
+    ret = ssl_handshake_client(ssl, tbuf);
+
+    do {
+        ret = wolfSSL_read(ssl, buf, MAX_I2C_MESSAGE_LEN-1);
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+
+    ssl_free_all(ctx, ssl, tbuf);
+
+    int i = 0;
+    do {
+        buffer[i] = buf[i];
+    } while (buf[i] != 0);
+
+    if (ret != WOLFSSL_SUCCESS) return -1;
+
+    return i+1;
 }
 
 /**
@@ -509,7 +549,8 @@ int main() {
     // Initialize board
     init();
 
-    MXC_ICC_Enable(MXC_ICC0);
+    // LETS GO PLAID
+    MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
 
     // test trng
     uint8_t var_rnd_no[16] = {0};
@@ -517,56 +558,68 @@ int main() {
 
     volatile unsigned int rng_test = get_random_trng();
 
-    volatile uint32_t clk_src = (MXC_GCR->clkctrl & MXC_F_GCR_CLKCTRL_SYSCLK_SEL);
-    volatile uint32_t ipo = MXC_S_GCR_CLKCTRL_SYSCLK_SEL_IPO;
-
-    // Systick regs
-    int *STCSR = (int *)0xE000E010;                    
-    int *STRVR = (int *)0xE000E014;              
-    int *STCVR = (int *)0xE000E018;
-    // Configure Systick    
-    *STRVR = 0xFFFFFF;  // max count
-    *STCVR = 0;         // force a re-load of the counter value register
-    *STCSR = 5;         // enable FCLK count without interrupt
-
     // test wolfSSL
-    WOLFSSL_CTX* ctx;
-    WOLFSSL* ssl;
-    tls13_buf *tbuf;
+    // WOLFSSL_CTX* ctx;
+    // WOLFSSL* ssl;
+    // tls13_buf *tbuf;
     int ret = 0;
     int err = 0;
 
-    // i2c speed test
-    // uint8_t testBuf[8096] = {1};
-    // tbuf = ssl_new_buf(0x11111124);
-    // i2cwolf_send(ssl, testBuf, 8096, tbuf);
+    const char testStrCmp1[] = "CMP1: Testing Component\r\n";
+    const char testStrCmp2[] = "CMP2: Testing Component\r\n";
+    unsigned char readBuf[MAX_I2C_MESSAGE_LEN];
 
-    tbuf = ssl_new_buf(0x11111124);
-    ctx = ssl_new_context_client();
-    ssl = ssl_new_session(ctx, tbuf);
+    /***********************************************
+     * Test connection with component 1 (0x11111124)
+    ***********************************************/
+    // tls13_buf *c1tbuf = ssl_new_buf(component_id_to_i2c_addr(0x11111124));
+    // WOLFSSL_CTX *c1ctx = ssl_new_context_client();
+    // WOLFSSL *c1ssl = ssl_new_session(c1ctx, c1tbuf);
+    // ret = ssl_handshake_client(c1ssl, c1tbuf);
 
-    ret = ssl_connect(ssl, tbuf);
-    printf("Handshake finished");
-    // volatile uint32_t end_cc = ARM_CM_DWT_CYCCNT;
+    // do {
+    //     ret = wolfSSL_write(c1ssl, testStrCmp1, XSTRLEN(testStrCmp1));
+    //     err = wolfSSL_get_error(c1ssl, ret);
+    // } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    // printf("Sent (%d): %s\n", err, testStrCmp1);
 
-    tbuf->curr_index = 0;
-    tbuf->data_len = 0;
+    // XMEMSET(readBuf, 0, sizeof(readBuf));
+    // do {
+    //     ret = wolfSSL_read(c1ssl, readBuf, sizeof(readBuf)-1);
+    //     err = wolfSSL_get_error(c1ssl, ret);
+    // } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    // printf("Read (%d): %s\n", err, readBuf);
 
-    const char testStr[] = "Testing 1, 2 and 3\r\n";
-    unsigned char readBuf[100];
+    // ssl_free_all(c1ctx, c1ssl, c1tbuf);
 
-    do {
-        ret = wolfSSL_write(ssl, testStr, XSTRLEN(testStr));
-        err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
-    printf("Sent (%d): %s\n", err, testStr);
+    secure_send(component_id_to_i2c_addr(0x11111124), testStrCmp1, XSTRLEN(testStrCmp1));
+    secure_receive(component_id_to_i2c_addr(0x11111124), readBuf);
 
-    XMEMSET(readBuf, 0, sizeof(readBuf));
-    do {
-        ret = wolfSSL_read(ssl, readBuf, sizeof(readBuf)-1);
-        err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
-    printf("Read (%d): %s\n", err, readBuf);
+    /***********************************************
+     * Test connection with component 2 (0x11111125)
+    ***********************************************/
+    // tls13_buf *c2tbuf = ssl_new_buf(component_id_to_i2c_addr(0x11111125));
+    // WOLFSSL_CTX *c2ctx = ssl_new_context_client();
+    // WOLFSSL *c2ssl = ssl_new_session(c2ctx, c2tbuf);
+    // ret = ssl_handshake_client(c2ssl, c2tbuf);
+
+    // do {
+    //     ret = wolfSSL_write(c2ssl, testStrCmp2, XSTRLEN(testStrCmp2));
+    //     err = wolfSSL_get_error(c2ssl, ret);
+    // } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    // printf("Sent (%d): %s\n", err, testStrCmp1);
+
+    // XMEMSET(readBuf, 0, sizeof(readBuf));
+    // do {
+    //     ret = wolfSSL_read(c2ssl, readBuf, sizeof(readBuf)-1);
+    //     err = wolfSSL_get_error(c2ssl, ret);
+    // } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    // printf("Read (%d): %s\n", err, readBuf);
+
+    // ssl_free_all(c2ctx, c2ssl, c2tbuf);
+
+    secure_send(component_id_to_i2c_addr(0x11111125), testStrCmp1, XSTRLEN(testStrCmp1));
+    secure_receive(component_id_to_i2c_addr(0x11111125), readBuf);
 
     
     #ifdef CRYPTO_EXAMPLE

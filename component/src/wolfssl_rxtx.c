@@ -1,8 +1,11 @@
+#include <icc.h>
+#include <stdio.h>
+
 #include "board_link.h"
 #include "wolfssl_rxtx.h"
 #include "wolfssl/wolfssl/ssl.h"
 #include "secrets_component.h"
-#include <stdio.h>
+
 
 
 int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
@@ -62,10 +65,10 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     return ret;
 }
 
-tls13_buf* ssl_new_buf(uint32_t component_id) {
+tls13_buf* ssl_new_buf(i2c_addr_t addr) {
     tls13_buf *tbuf = (tls13_buf *)malloc(sizeof(tls13_buf));
     XMEMSET(tbuf, 0, sizeof(tls13_buf));
-    tbuf->addr = component_id_to_i2c_addr(component_id);
+    tbuf->addr = addr;
 
     return tbuf;
 }
@@ -128,9 +131,11 @@ WOLFSSL* ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf) {
     return ssl;
 }
 
-int ssl_accept(WOLFSSL *ssl, tls13_buf *tbuf) {
+int ssl_handshake_server(WOLFSSL *ssl, tls13_buf *tbuf) {
     int ret = 0;
     int err = 0;
+
+    MXC_ICC_Enable(MXC_ICC0);
 
     do {
         ret = wolfSSL_accept(ssl);
@@ -143,6 +148,8 @@ int ssl_accept(WOLFSSL *ssl, tls13_buf *tbuf) {
         return -1;
     }
 
+    MXC_ICC_Disable(MXC_ICC0);
+
     // Reset communication state
     tbuf->curr_index = 0;
     tbuf->data_len = 0;
@@ -150,4 +157,11 @@ int ssl_accept(WOLFSSL *ssl, tls13_buf *tbuf) {
     I2C_REGS[TRANSMIT_DONE][0] = true;
 
     return 0;
+}
+
+
+int ssl_free_all(WOLFSSL_CTX *ctx, WOLFSSL *ssl, tls13_buf *tbuf) {
+    wolfSSL_CTX_free(ctx);
+    wolfSSL_free(ssl);
+    free(tbuf);
 }

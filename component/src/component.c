@@ -121,8 +121,26 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * Securely send data over I2C. This function is utilized in POST_BOOT functionality.
  * This function must be implemented by your team to align with the security requirements.
 */
-void secure_send(uint8_t* buffer, uint8_t len) {
-    send_packet_and_ack(len, buffer); 
+void __attribute__((noinline)) secure_send(uint8_t* buffer, uint8_t len) {
+    uint8_t buf[MAX_I2C_MESSAGE_LEN] = {0};
+    int ret = 0;
+    int err = 0;
+
+    XMEMCPY(buf, buffer, len);
+
+    tls13_buf *tbuf = ssl_new_buf(0);
+    WOLFSSL_CTX *ctx = ssl_new_context_server();
+    WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
+    ret = ssl_handshake_server(ssl, tbuf);
+
+    do {
+        ret = wolfSSL_write(ssl, buf, MAX_I2C_MESSAGE_LEN-1);
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+
+    ssl_free_all(ctx, ssl, tbuf);
+
+    return len;
 }
 
 /**
@@ -135,8 +153,31 @@ void secure_send(uint8_t* buffer, uint8_t len) {
  * Securely receive data over I2C. This function is utilized in POST_BOOT functionality.
  * This function must be implemented by your team to align with the security requirements.
 */
-int secure_receive(uint8_t* buffer) {
-    return wait_and_receive_packet(buffer);
+int __attribute__((noinline)) secure_receive(uint8_t* buffer) {
+    uint8_t buf[MAX_I2C_MESSAGE_LEN] = {0};
+    int ret = 0;
+    int err = 0;
+
+    tls13_buf *tbuf = ssl_new_buf(0);
+    WOLFSSL_CTX *ctx = ssl_new_context_server();
+    WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
+    ret = ssl_handshake_server(ssl, tbuf);
+
+    do {
+        ret = wolfSSL_read(ssl, buf, MAX_I2C_MESSAGE_LEN-1);
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+
+    ssl_free_all(ctx, ssl, tbuf);
+
+    int i = 0;
+    do {
+        buffer[i] = buf[i];
+    } while (buf[i] != 0);
+
+    if (ret != WOLFSSL_SUCCESS) return -1;
+
+    return i+1;
 }
 
 /******************************* FUNCTION DEFINITIONS *********************************/
@@ -235,6 +276,9 @@ int main(void) {
     
     // Enable Global Interrupts
     __enable_irq();
+
+    // LETS GO PLAID
+    MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
     
     // Initialize Component
     i2c_addr_t addr = component_id_to_i2c_addr(COMPONENT_ID);
@@ -260,31 +304,31 @@ int main(void) {
     // tbuf = ssl_new_buf(0);
     // i2cwolf_receive(ssl, testBuf, 8096, tbuf);
 
-    tbuf = ssl_new_buf(0);
-    ctx = ssl_new_context_server();
-    ssl = ssl_new_session(ctx, tbuf);
+    // tbuf = ssl_new_buf(0);
+    // ctx = ssl_new_context_server();
+    // ssl = ssl_new_session(ctx, tbuf);
+    // ret = ssl_handshake_server(ssl, tbuf);
+    // printf("Handshake finished");
+    // // NOTE: must reset send/receive i2c registers at end of comm!
 
+    unsigned char echoBuffer[MAX_I2C_MESSAGE_LEN];
 
-    MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
+    // XMEMSET(echoBuffer, 0, sizeof(echoBuffer));
+    // do {
+    //     ret = wolfSSL_read(ssl, echoBuffer, sizeof(echoBuffer)-1);
+    //     err = wolfSSL_get_error(ssl, ret);
+    // } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    // printf("Read (%d): %s\n", err, echoBuffer);
 
-    ret = ssl_accept(ssl, tbuf);
-    printf("Handshake finished");
-    // NOTE: must reset send/receive i2c registers at end of comm!
+    // do {
+    //     ret = wolfSSL_write(ssl, echoBuffer, XSTRLEN((char*)echoBuffer));
+    //     err = wolfSSL_get_error(ssl, ret);
+    // } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    // printf("Sent (%d): %s\n", err, echoBuffer);
 
-    unsigned char echoBuffer[100];
-
-    XMEMSET(echoBuffer, 0, sizeof(echoBuffer));
-    do {
-        ret = wolfSSL_read(ssl, echoBuffer, sizeof(echoBuffer)-1);
-        err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
-    printf("Read (%d): %s\n", err, echoBuffer);
-
-    do {
-        ret = wolfSSL_write(ssl, echoBuffer, XSTRLEN((char*)echoBuffer));
-        err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
-    printf("Sent (%d): %s\n", err, echoBuffer);
+    // ssl_free_all(ctx, ssl, tbuf);
+    secure_receive(echoBuffer);
+    secure_send(echoBuffer, sizeof(echoBuffer));
     
 
     while (1) {
