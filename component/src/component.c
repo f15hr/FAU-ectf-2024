@@ -287,21 +287,24 @@ void process_scan() {
     // The AP requested a scan. Respond with the Component ID
     scan_message* packet = (scan_message*) transmit_buffer;
     packet->component_id = COMPONENT_ID;
-    send_packet_and_ack(sizeof(scan_message), transmit_buffer);
+    secure_send(sizeof(scan_message), transmit_buffer);
+    // send_packet_and_ack(sizeof(scan_message), transmit_buffer);
 }
 
 void process_validate() {
     // The AP requested a validation. Respond with the Component ID
     validate_message* packet = (validate_message*) transmit_buffer;
     packet->component_id = COMPONENT_ID;
-    send_packet_and_ack(sizeof(validate_message), transmit_buffer);
+    secure_send(sizeof(validate_message), transmit_buffer);
+    // send_packet_and_ack(sizeof(validate_message), transmit_buffer);
 }
 
 void process_attest() {
     // The AP requested attestation. Respond with the attestation data
     uint8_t len = sprintf((char*)transmit_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
-    send_packet_and_ack(len, transmit_buffer);
+    secure_send(len, transmit_buffer);
+    // send_packet_and_ack(len, transmit_buffer);
 }
 
 /*********************************** MAIN *************************************/
@@ -328,16 +331,12 @@ int main(void) {
 
     unsigned char echoBuffer[MAX_I2C_MESSAGE_LEN] = {0};
 
-    secure_receive(echoBuffer);
-    secure_send(echoBuffer, 255);
+    // secure_receive(echoBuffer);
+    // secure_send(echoBuffer, 255);
     
 
     while (1) {
         secure_receive(receive_buffer);
-        // wait_and_receive_packet(receive_buffer);
-        // print_info(receive_buffer);
-        // uint8_t transmit_buffer[2] = "hi";
-        // send_packet_and_ack(sizeof(transmit_buffer), transmit_buffer);
 
         component_process_cmd();
     }
