@@ -286,7 +286,7 @@ int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
     // Send message
     
     // int result = send_packet(addr, sizeof(uint8_t), transmit);
-    int result = secure_send(addr, sizeof(uint8_t), transmit);
+    int result = secure_send(addr, transmit, sizeof(uint8_t));
     if (result == ERROR_RETURN) {
         return ERROR_RETURN;
     }

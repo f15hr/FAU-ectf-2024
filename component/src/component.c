@@ -278,7 +278,8 @@ void process_boot() {
     // respond with the boot message
     uint8_t len = strlen(COMPONENT_BOOT_MSG) + 1;
     memcpy((void*)transmit_buffer, COMPONENT_BOOT_MSG, len);
-    send_packet_and_ack(len, transmit_buffer);
+    secure_send(transmit_buffer, len);
+    // send_packet_and_ack(len, transmit_buffer);
     // Call the boot function
     boot();
 }
@@ -287,7 +288,7 @@ void process_scan() {
     // The AP requested a scan. Respond with the Component ID
     scan_message* packet = (scan_message*) transmit_buffer;
     packet->component_id = COMPONENT_ID;
-    secure_send(sizeof(scan_message), transmit_buffer);
+    secure_send(transmit_buffer, sizeof(scan_message));
     // send_packet_and_ack(sizeof(scan_message), transmit_buffer);
 }
 
@@ -295,7 +296,7 @@ void process_validate() {
     // The AP requested a validation. Respond with the Component ID
     validate_message* packet = (validate_message*) transmit_buffer;
     packet->component_id = COMPONENT_ID;
-    secure_send(sizeof(validate_message), transmit_buffer);
+    secure_send(transmit_buffer, sizeof(validate_message));
     // send_packet_and_ack(sizeof(validate_message), transmit_buffer);
 }
 
@@ -303,7 +304,7 @@ void process_attest() {
     // The AP requested attestation. Respond with the attestation data
     uint8_t len = sprintf((char*)transmit_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
-    secure_send(len, transmit_buffer);
+    secure_send(transmit_buffer, len);
     // send_packet_and_ack(len, transmit_buffer);
 }
 
