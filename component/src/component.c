@@ -121,7 +121,7 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * Securely send data over I2C. This function is utilized in POST_BOOT functionality.
  * This function must be implemented by your team to align with the security requirements.
 */
-void __attribute__((noinline)) secure_send(uint8_t* buffer, uint8_t len) {
+void __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t len) {
     uint8_t buf[MAX_I2C_MESSAGE_LEN] = {0};
     int ret = 0;
     int err = 0;
@@ -153,31 +153,47 @@ void __attribute__((noinline)) secure_send(uint8_t* buffer, uint8_t len) {
  * Securely receive data over I2C. This function is utilized in POST_BOOT functionality.
  * This function must be implemented by your team to align with the security requirements.
 */
-int __attribute__((noinline)) secure_receive(uint8_t* buffer) {
-    uint8_t buf[MAX_I2C_MESSAGE_LEN] = {0};
+int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
     int ret = 0;
     int err = 0;
+    uint8_t rcv_len[1] = {0};
 
     tls13_buf *tbuf = ssl_new_buf(0);
     WOLFSSL_CTX *ctx = ssl_new_context_server();
     WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
     ret = ssl_handshake_server(ssl, tbuf);
 
+    if (ret <= 0) {
+        ssl_free_all(ctx, ssl, tbuf);
+        return ERROR_RETURN;
+    }
+
     do {
-        ret = wolfSSL_read(ssl, buf, MAX_I2C_MESSAGE_LEN-1);
+        ret = wolfSSL_read(ssl, rcv_len, 1);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    if (ret <= 0) {
+        ssl_free_all(ctx, ssl, tbuf);
+        return ERROR_RETURN;
+    }
+
+    uint8_t t_len = rcv_len[0];
+
+    do {
+        ret = wolfSSL_read(ssl, buffer, t_len);
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+
+    if (ret <= 0) {
+        ssl_free_all(ctx, ssl, tbuf);
+        return ERROR_RETURN;
+    }
+
+
     ssl_free_all(ctx, ssl, tbuf);
 
-    int i = 0;
-    do {
-        buffer[i] = buf[i];
-    } while (buf[i] != 0);
-
-    if (ret != WOLFSSL_SUCCESS) return -1;
-
-    return i+1;
+    return ret;
 }
 
 /******************************* FUNCTION DEFINITIONS *********************************/

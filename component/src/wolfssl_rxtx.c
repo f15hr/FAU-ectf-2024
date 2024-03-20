@@ -14,6 +14,8 @@ int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
 
     if (tb->curr_index == 0) {
         XMEMSET(tb->buf, 0, MAX_RECORD_SIZE);
+        I2C_REGS[RECEIVE_DONE][0] = false;
+        I2C_REGS[TRANSMIT_DONE][0] = true;
         int len = wait_and_receive_packet(tb->buf);
         if (len == ERROR_RETURN) {
             return -1;
@@ -23,6 +25,8 @@ int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
 
     // Handle the case where sz > MAX_I2C_MESSAGE_LEN
     while (tb->data_len < (sz + tb->curr_index)) {
+        I2C_REGS[RECEIVE_DONE][0] = false;
+        I2C_REGS[TRANSMIT_DONE][0] = true;
         int len = wait_and_receive_packet(tb->buf + tb->data_len);
         if (len == ERROR_RETURN) {
             return -1;
@@ -37,7 +41,7 @@ int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     // set the curr_index to 0 to reset the state.
     if (tb->curr_index == tb->data_len) {
         tb->curr_index = 0;
-    } 
+    }
 
     return sz;
 }
@@ -53,6 +57,8 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     // Handle the case where sz > MAX_I2C_MESSAGE_LEN
     while (len > MAX_I2C_MESSAGE_LEN-1) {
         send_packet_and_ack(MAX_I2C_MESSAGE_LEN-1, buf + i);
+        I2C_REGS[TRANSMIT_DONE][0] = false;
+        I2C_REGS[RECEIVE_DONE][0] = false;
         len -= MAX_I2C_MESSAGE_LEN-1;
         i += MAX_I2C_MESSAGE_LEN-1;
     }
@@ -61,6 +67,8 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
         return ret;
 
     send_packet_and_ack(len, buf + i);
+    I2C_REGS[TRANSMIT_DONE][0] = false;
+    I2C_REGS[RECEIVE_DONE][0] = false;
     
     return ret;
 }
@@ -156,7 +164,7 @@ int ssl_handshake_server(WOLFSSL *ssl, tls13_buf *tbuf) {
     I2C_REGS[RECEIVE_DONE][0] = false;
     I2C_REGS[TRANSMIT_DONE][0] = true;
 
-    return 0;
+    return WOLFSSL_SUCCESS;
 }
 
 

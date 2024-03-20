@@ -132,22 +132,42 @@ flash_entry flash_status;
 
 */
 
-int __attribute__((noinline)) secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
-    uint8_t buf[MAX_I2C_MESSAGE_LEN] = {0};
+int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
     int ret = 0;
     int err = 0;
-
-    XMEMCPY(buf, buffer, len);
+    uint8_t snd_len[1] = {len};
+    int total_size = 0;
 
     tls13_buf *tbuf = ssl_new_buf(address);
     WOLFSSL_CTX *ctx = ssl_new_context_client();
     WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
     ret = ssl_handshake_client(ssl, tbuf);
 
+    if (ret <= 0) {
+        ssl_free_all(ctx, ssl, tbuf);
+        return ERROR_RETURN;
+    }
+
     do {
-        ret = wolfSSL_write(ssl, buf, MAX_I2C_MESSAGE_LEN-1);
+        ret = wolfSSL_write(ssl, snd_len, 1);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+
+    if (ret <= 0) {
+        ssl_free_all(ctx, ssl, tbuf);
+        return ERROR_RETURN;
+    }
+
+    do {
+        ret = wolfSSL_write(ssl, buffer, len);
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+
+
+    if (ret <= 0) {
+        ssl_free_all(ctx, ssl, tbuf);
+        return ERROR_RETURN;
+    }
 
     ssl_free_all(ctx, ssl, tbuf);
 
@@ -165,7 +185,7 @@ int __attribute__((noinline)) secure_send(uint8_t address, uint8_t* buffer, uint
  * Securely receive data over I2C. This function is utilized in POST_BOOT functionality.
  * This function must be implemented by your team to align with the security requirements.
 */
-int __attribute__((noinline)) secure_receive(i2c_addr_t address, uint8_t* buffer) {
+int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, uint8_t* buffer) {
     uint8_t buf[MAX_I2C_MESSAGE_LEN] = {0};
     int ret = 0;
     int err = 0;
@@ -565,7 +585,7 @@ int main() {
     int ret = 0;
     int err = 0;
 
-    const char testStrCmp1[] = "CMP1: Testing Component\r\n";
+    const char testStrCmp1[255] = "2c678ef5d16e9ba734cac406a5e145840a38dea53420cbe79fd5bc3bcaa6e4b9dd03b2b3a08ceff0aec824c251ea7ab27730abb275e51ab12a1c7247034af71c40c2bbb2c12a95946137f6045c1303bfb8dffe4f488e913e8632c9ccd2a3dcc08fc3f4a32d9ad736293744c67fe55eba0ccc8ff576e1333cbfb9ef3deeaf65f";
     const char testStrCmp2[] = "CMP2: Testing Component\r\n";
     unsigned char readBuf[MAX_I2C_MESSAGE_LEN];
 
@@ -592,7 +612,7 @@ int main() {
 
     // ssl_free_all(c1ctx, c1ssl, c1tbuf);
 
-    secure_send(component_id_to_i2c_addr(0x11111124), testStrCmp1, XSTRLEN(testStrCmp1));
+    secure_send(component_id_to_i2c_addr(0x11111124), testStrCmp1, 255);
     secure_receive(component_id_to_i2c_addr(0x11111124), readBuf);
 
     /***********************************************
