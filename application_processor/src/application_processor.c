@@ -136,7 +136,6 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
     int ret = 0;
     int err = 0;
     uint8_t snd_len[1] = {len};
-    int total_size = 0;
 
     tls13_buf *tbuf = ssl_new_buf(address);
     WOLFSSL_CTX *ctx = ssl_new_context_client();
@@ -189,27 +188,41 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     uint8_t buf[MAX_I2C_MESSAGE_LEN] = {0};
     int ret = 0;
     int err = 0;
+    uint8_t rcv_len[1] = {0};
 
     tls13_buf *tbuf = ssl_new_buf(address);
     WOLFSSL_CTX *ctx = ssl_new_context_client();
     WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
     ret = ssl_handshake_client(ssl, tbuf);
 
+    if (ret <= 0) {
+        ssl_free_all(ctx, ssl, tbuf);
+        return ERROR_RETURN;
+    }
+
     do {
-        ret = wolfSSL_read(ssl, buf, MAX_I2C_MESSAGE_LEN-1);
+        ret = wolfSSL_read(ssl, rcv_len, 1);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
-    ssl_free_all(ctx, ssl, tbuf);
+    if (ret <= 0) {
+        ssl_free_all(ctx, ssl, tbuf);
+        return ERROR_RETURN;
+    }
 
-    int i = 0;
+    uint8_t t_len = rcv_len[0];
+
     do {
-        buffer[i] = buf[i];
-    } while (buf[i] != 0);
+        ret = wolfSSL_read(ssl, buffer, t_len);
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
-    if (ret != WOLFSSL_SUCCESS) return -1;
+    if (ret <= 0) {
+        ssl_free_all(ctx, ssl, tbuf);
+        return ERROR_RETURN;
+    }
 
-    return i+1;
+    return ret;
 }
 
 /**
@@ -272,13 +285,15 @@ void init() {
 int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
     // Send message
     
-    int result = send_packet(addr, sizeof(uint8_t), transmit);
+    // int result = send_packet(addr, sizeof(uint8_t), transmit);
+    int result = secure_send(addr, sizeof(uint8_t), transmit);
     if (result == ERROR_RETURN) {
         return ERROR_RETURN;
     }
     
     // Receive message
-    int len = poll_and_receive_packet(addr, receive);
+    // int len = poll_and_receive_packet(addr, receive);
+    int len = secure_receive(addr, receive);
     if (len == ERROR_RETURN) {
         return ERROR_RETURN;
     }
@@ -587,59 +602,19 @@ int main() {
 
     const char testStrCmp1[255] = "2c678ef5d16e9ba734cac406a5e145840a38dea53420cbe79fd5bc3bcaa6e4b9dd03b2b3a08ceff0aec824c251ea7ab27730abb275e51ab12a1c7247034af71c40c2bbb2c12a95946137f6045c1303bfb8dffe4f488e913e8632c9ccd2a3dcc08fc3f4a32d9ad736293744c67fe55eba0ccc8ff576e1333cbfb9ef3deeaf65f";
     const char testStrCmp2[] = "CMP2: Testing Component\r\n";
-    unsigned char readBuf[MAX_I2C_MESSAGE_LEN];
+    unsigned char readBuf[MAX_I2C_MESSAGE_LEN] = {0};
 
     /***********************************************
      * Test connection with component 1 (0x11111124)
     ***********************************************/
-    // tls13_buf *c1tbuf = ssl_new_buf(component_id_to_i2c_addr(0x11111124));
-    // WOLFSSL_CTX *c1ctx = ssl_new_context_client();
-    // WOLFSSL *c1ssl = ssl_new_session(c1ctx, c1tbuf);
-    // ret = ssl_handshake_client(c1ssl, c1tbuf);
-
-    // do {
-    //     ret = wolfSSL_write(c1ssl, testStrCmp1, XSTRLEN(testStrCmp1));
-    //     err = wolfSSL_get_error(c1ssl, ret);
-    // } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
-    // printf("Sent (%d): %s\n", err, testStrCmp1);
-
-    // XMEMSET(readBuf, 0, sizeof(readBuf));
-    // do {
-    //     ret = wolfSSL_read(c1ssl, readBuf, sizeof(readBuf)-1);
-    //     err = wolfSSL_get_error(c1ssl, ret);
-    // } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
-    // printf("Read (%d): %s\n", err, readBuf);
-
-    // ssl_free_all(c1ctx, c1ssl, c1tbuf);
-
-    secure_send(component_id_to_i2c_addr(0x11111124), testStrCmp1, 255);
-    secure_receive(component_id_to_i2c_addr(0x11111124), readBuf);
+    // secure_send(component_id_to_i2c_addr(0x11111124), testStrCmp1, 255);
+    // secure_receive(component_id_to_i2c_addr(0x11111124), readBuf);
 
     /***********************************************
      * Test connection with component 2 (0x11111125)
     ***********************************************/
-    // tls13_buf *c2tbuf = ssl_new_buf(component_id_to_i2c_addr(0x11111125));
-    // WOLFSSL_CTX *c2ctx = ssl_new_context_client();
-    // WOLFSSL *c2ssl = ssl_new_session(c2ctx, c2tbuf);
-    // ret = ssl_handshake_client(c2ssl, c2tbuf);
-
-    // do {
-    //     ret = wolfSSL_write(c2ssl, testStrCmp2, XSTRLEN(testStrCmp2));
-    //     err = wolfSSL_get_error(c2ssl, ret);
-    // } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
-    // printf("Sent (%d): %s\n", err, testStrCmp1);
-
-    // XMEMSET(readBuf, 0, sizeof(readBuf));
-    // do {
-    //     ret = wolfSSL_read(c2ssl, readBuf, sizeof(readBuf)-1);
-    //     err = wolfSSL_get_error(c2ssl, ret);
-    // } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
-    // printf("Read (%d): %s\n", err, readBuf);
-
-    // ssl_free_all(c2ctx, c2ssl, c2tbuf);
-
-    secure_send(component_id_to_i2c_addr(0x11111125), testStrCmp1, XSTRLEN(testStrCmp1));
-    secure_receive(component_id_to_i2c_addr(0x11111125), readBuf);
+    // secure_send(component_id_to_i2c_addr(0x11111125), testStrCmp1, XSTRLEN(testStrCmp1));
+    // secure_receive(component_id_to_i2c_addr(0x11111125), readBuf);
 
     
     #ifdef CRYPTO_EXAMPLE
@@ -658,24 +633,6 @@ int main() {
         // Execute requested command
         if (!strcmp(buf, "list")) {
             scan_components();
-                // Send message
-            
-            // i2c_addr_t addr = component_id_to_i2c_addr(0x11111124);
-            // uint8_t transmit[5] = "hello";
-            // uint8_t receive[2] = {0};
-
-            // int result = send_packet(addr, sizeof(uint8_t), transmit);
-            // if (result == ERROR_RETURN) {
-            //     return ERROR_RETURN;
-            // }
-            
-            // // Receive message
-            // int len = poll_and_receive_packet(addr, receive);
-            // if (len == ERROR_RETURN) {
-            //     return ERROR_RETURN;
-            // }
-            
-            // print_info(receive);
 
         } else if (!strcmp(buf, "boot")) {
             attempt_boot();

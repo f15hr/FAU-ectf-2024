@@ -122,25 +122,44 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * This function must be implemented by your team to align with the security requirements.
 */
 void __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t len) {
-    uint8_t buf[MAX_I2C_MESSAGE_LEN] = {0};
     int ret = 0;
     int err = 0;
-
-    XMEMCPY(buf, buffer, len);
+    uint8_t snd_len[1] = {len};
 
     tls13_buf *tbuf = ssl_new_buf(0);
     WOLFSSL_CTX *ctx = ssl_new_context_server();
     WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
     ret = ssl_handshake_server(ssl, tbuf);
 
+    if (ret <= 0) {
+        ssl_free_all(ctx, ssl, tbuf);
+        return ERROR_RETURN;
+    }
+
     do {
-        ret = wolfSSL_write(ssl, buf, MAX_I2C_MESSAGE_LEN-1);
+        ret = wolfSSL_write(ssl, snd_len, 1);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    if (ret <= 0) {
+        ssl_free_all(ctx, ssl, tbuf);
+        return ERROR_RETURN;
+    }
+
+    do {
+        ret = wolfSSL_write(ssl, buffer, len);
+        err = wolfSSL_get_error(ssl, ret);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+
+
+    if (ret <= 0) {
+        ssl_free_all(ctx, ssl, tbuf);
+        return ERROR_RETURN;
+    }
+
     ssl_free_all(ctx, ssl, tbuf);
 
-    return len;
+    return ret;
 }
 
 /**
@@ -307,48 +326,15 @@ int main(void) {
     
     LED_On(LED2);
 
+    unsigned char echoBuffer[MAX_I2C_MESSAGE_LEN] = {0};
 
-    // test wolfSSL
-    WOLFSSL_CTX* ctx;
-    WOLFSSL* ssl;
-    tls13_buf *tbuf;
-    int ret = 0;
-    int err = 0;
-
-    // i2c speed test
-    // uint8_t testBuf[8096] = {0};
-    // tbuf = ssl_new_buf(0);
-    // i2cwolf_receive(ssl, testBuf, 8096, tbuf);
-
-    // tbuf = ssl_new_buf(0);
-    // ctx = ssl_new_context_server();
-    // ssl = ssl_new_session(ctx, tbuf);
-    // ret = ssl_handshake_server(ssl, tbuf);
-    // printf("Handshake finished");
-    // // NOTE: must reset send/receive i2c registers at end of comm!
-
-    unsigned char echoBuffer[MAX_I2C_MESSAGE_LEN];
-
-    // XMEMSET(echoBuffer, 0, sizeof(echoBuffer));
-    // do {
-    //     ret = wolfSSL_read(ssl, echoBuffer, sizeof(echoBuffer)-1);
-    //     err = wolfSSL_get_error(ssl, ret);
-    // } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
-    // printf("Read (%d): %s\n", err, echoBuffer);
-
-    // do {
-    //     ret = wolfSSL_write(ssl, echoBuffer, XSTRLEN((char*)echoBuffer));
-    //     err = wolfSSL_get_error(ssl, ret);
-    // } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
-    // printf("Sent (%d): %s\n", err, echoBuffer);
-
-    // ssl_free_all(ctx, ssl, tbuf);
     secure_receive(echoBuffer);
-    secure_send(echoBuffer, sizeof(echoBuffer));
+    secure_send(echoBuffer, 255);
     
 
     while (1) {
-        wait_and_receive_packet(receive_buffer);
+        secure_receive(receive_buffer);
+        // wait_and_receive_packet(receive_buffer);
         // print_info(receive_buffer);
         // uint8_t transmit_buffer[2] = "hi";
         // send_packet_and_ack(sizeof(transmit_buffer), transmit_buffer);

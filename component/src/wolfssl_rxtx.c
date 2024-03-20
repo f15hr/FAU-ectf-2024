@@ -56,19 +56,19 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     
     // Handle the case where sz > MAX_I2C_MESSAGE_LEN
     while (len > MAX_I2C_MESSAGE_LEN-1) {
-        send_packet_and_ack(MAX_I2C_MESSAGE_LEN-1, buf + i);
-        I2C_REGS[TRANSMIT_DONE][0] = false;
         I2C_REGS[RECEIVE_DONE][0] = false;
+        I2C_REGS[TRANSMIT_DONE][0] = true;
+        send_packet_and_ack(MAX_I2C_MESSAGE_LEN-1, buf + i);
         len -= MAX_I2C_MESSAGE_LEN-1;
         i += MAX_I2C_MESSAGE_LEN-1;
     }
 
     if (len == 0)
         return ret;
-
-    send_packet_and_ack(len, buf + i);
-    I2C_REGS[TRANSMIT_DONE][0] = false;
+        
     I2C_REGS[RECEIVE_DONE][0] = false;
+    I2C_REGS[TRANSMIT_DONE][0] = true;
+    send_packet_and_ack(len, buf + i);
     
     return ret;
 }

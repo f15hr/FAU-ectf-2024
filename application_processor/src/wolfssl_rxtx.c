@@ -14,7 +14,7 @@ int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     if (tb->curr_index == 0) {
         XMEMSET(tb->buf, 0, MAX_RECORD_SIZE);
         int len = poll_and_receive_packet(tb->addr, tb->buf);
-        i2c_simple_write_transmit_done(tb->addr, true);
+
         if (len == ERROR_RETURN) {
             return -1;
         }
@@ -24,7 +24,6 @@ int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     // Handle the case where sz > MAX_I2C_MESSAGE_LEN
     while (tb->data_len < (sz + tb->curr_index)) {
         int len = poll_and_receive_packet(tb->addr, tb->buf + tb->data_len);
-        i2c_simple_write_transmit_done(tb->addr, true);
         if (len == ERROR_RETURN) {
             return -1;
         }
