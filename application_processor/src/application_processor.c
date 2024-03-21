@@ -222,6 +222,8 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
         return ERROR_RETURN;
     }
 
+    ssl_free_all(ctx, ssl, tbuf);
+
     return ret;
 }
 
