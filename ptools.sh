@@ -6,8 +6,8 @@ ap_output_name="ap"
 ap_output_dir="build"
 ap_pin="123456"
 ap_token="0123456789abcdef"
-ap_component_cnt="1"
-ap_component_ids="0x11111124"
+ap_component_cnt="2"
+ap_component_ids="0x11111124, 0x11111125"
 ap_boot_message="AP Boot!"
 
 # COMPONENT 1 BUILD PARAMETERS
