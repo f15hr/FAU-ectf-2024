@@ -137,6 +137,8 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
     int err = 0;
     uint8_t snd_len[1] = {len};
 
+    wolfSSL_Init();
+
     tls13_buf *tbuf; 
     WOLFSSL_CTX *ctx; 
     WOLFSSL *ssl; 
@@ -177,6 +179,7 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
     }
 
     ssl_free_all(ctx, ssl, tbuf);
+    wolfSSL_Cleanup();
 
     return ret;
 }
@@ -197,6 +200,8 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     int err = 0;
     uint8_t rcv_len[1] = {0};
 
+    wolfSSL_Init();
+
     tls13_buf *tbuf; 
     WOLFSSL_CTX *ctx; 
     WOLFSSL *ssl; 
@@ -204,8 +209,8 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
         tbuf = ssl_new_buf(address);
         ctx = ssl_new_context_client();
         ssl = ssl_new_session(ctx, tbuf);
+        MXC_Delay(500000);
         ret = ssl_handshake_client(ssl, tbuf);
-        i2c_simple_write_transmit_done(address, true);
     } while (ret == -1);
 
 
@@ -215,9 +220,10 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     }
 
     do {
+        MXC_Delay(50000);
         ret = wolfSSL_read(ssl, rcv_len, 1);
         err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -308);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -180);
 
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
@@ -227,9 +233,10 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     uint8_t t_len = rcv_len[0];
 
     do {
+        MXC_Delay(50000);
         ret = wolfSSL_read(ssl, buffer, t_len);
         err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -308);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -180);
 
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
@@ -237,6 +244,7 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     }
 
     ssl_free_all(ctx, ssl, tbuf);
+    wolfSSL_Cleanup();
 
     return ret;
 }
