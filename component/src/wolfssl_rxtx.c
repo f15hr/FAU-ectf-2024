@@ -43,6 +43,8 @@ int __attribute__((noinline, optimize(0))) i2cwolf_receive(WOLFSSL* ssl, char* b
         tb->curr_index = 0;
     }
 
+    I2C_REGS[RECEIVE_DONE][0] = false;
+    I2C_REGS[TRANSMIT_DONE][0] = false;
     return sz;
 }
 
@@ -53,12 +55,13 @@ int __attribute__((noinline, optimize(0))) i2cwolf_send(WOLFSSL* ssl, char* buf,
 
     int i = 0;
     uint16_t len = (uint16_t)sz;
-    
+
     // Handle the case where sz > MAX_I2C_MESSAGE_LEN
     while (len > MAX_I2C_MESSAGE_LEN-1) {
         I2C_REGS[RECEIVE_DONE][0] = true;
         I2C_REGS[TRANSMIT_DONE][0] = false;
         send_packet_and_ack(MAX_I2C_MESSAGE_LEN-1, buf + i);
+        I2C_REGS[TRANSMIT_DONE][0] = true;
         len -= MAX_I2C_MESSAGE_LEN-1;
         i += MAX_I2C_MESSAGE_LEN-1;
     }
@@ -69,6 +72,7 @@ int __attribute__((noinline, optimize(0))) i2cwolf_send(WOLFSSL* ssl, char* buf,
     I2C_REGS[RECEIVE_DONE][0] = true;
     I2C_REGS[TRANSMIT_DONE][0] = false;
     send_packet_and_ack(len, buf + i);
+    I2C_REGS[TRANSMIT_DONE][0] = true;
     
     return ret;
 }
