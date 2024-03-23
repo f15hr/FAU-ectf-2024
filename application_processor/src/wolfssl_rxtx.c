@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 
-int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
+int __attribute__((noinline, optimize(0))) i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
 
     tls13_buf *tb = ctx;
 
@@ -43,7 +43,7 @@ int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     return sz;
 }
 
-int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
+int __attribute__((noinline, optimize(0))) i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
 
     tls13_buf *tb = ctx;
     int ret = sz;
@@ -55,7 +55,6 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     // Handle the case where sz > MAX_I2C_MESSAGE_LEN
     while (len > MAX_I2C_MESSAGE_LEN-1) {
         int result = send_packet(tb->addr, MAX_I2C_MESSAGE_LEN-1, buf + i);
-        i2c_simple_write_receive_done(tb->addr, true);
         if (result == ERROR_RETURN) {
             ret = -1;
         }
@@ -68,6 +67,7 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
         
     int result = send_packet(tb->addr, len, buf + i);
     if (result == ERROR_RETURN) {
+        i2c_simple_write_receive_done(tb->addr, true);
         ret = -1;
     }
 
@@ -75,7 +75,7 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
 }
 
 
-tls13_buf* ssl_new_buf(i2c_addr_t addr) {
+tls13_buf* __attribute__((noinline, optimize(0))) ssl_new_buf(i2c_addr_t addr) {
     tls13_buf *tbuf = (tls13_buf *)malloc(sizeof(tls13_buf));
     XMEMSET(tbuf, 0, sizeof(tls13_buf));
     tbuf->addr = addr;
@@ -83,7 +83,7 @@ tls13_buf* ssl_new_buf(i2c_addr_t addr) {
     return tbuf;
 }
 
-WOLFSSL_CTX* ssl_new_context_client() {
+WOLFSSL_CTX* __attribute__((noinline, optimize(0))) ssl_new_context_client() {
     WOLFSSL_CTX* ctx;
     ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method());
     if(ctx == 0) {
@@ -120,7 +120,7 @@ WOLFSSL_CTX* ssl_new_context_client() {
     return ctx;
 }
 
-WOLFSSL* ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf) {
+WOLFSSL* __attribute__((noinline, optimize(0))) ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf) {
     WOLFSSL *ssl;
     ssl = wolfSSL_new(ctx);
     if(ssl == 0) {
@@ -137,7 +137,7 @@ WOLFSSL* ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf) {
     return ssl;
 }
 
-int ssl_handshake_client(WOLFSSL *ssl, tls13_buf *tbuf) {
+int __attribute__((noinline, optimize(0))) ssl_handshake_client(WOLFSSL *ssl, tls13_buf *tbuf) {
     int ret = 0;
     int err = 0;
 

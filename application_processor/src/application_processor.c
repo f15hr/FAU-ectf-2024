@@ -137,10 +137,16 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
     int err = 0;
     uint8_t snd_len[1] = {len};
 
-    tls13_buf *tbuf = ssl_new_buf(address);
-    WOLFSSL_CTX *ctx = ssl_new_context_client();
-    WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
-    ret = ssl_handshake_client(ssl, tbuf);
+    tls13_buf *tbuf; 
+    WOLFSSL_CTX *ctx; 
+    WOLFSSL *ssl; 
+    do {
+        tbuf = ssl_new_buf(address);
+        ctx = ssl_new_context_client();
+        ssl = ssl_new_session(ctx, tbuf);
+        ret = ssl_handshake_client(ssl, tbuf);
+    } while (ret == -1);
+
 
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
@@ -148,9 +154,10 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
     }
 
     do {
+        MXC_Delay(50000);
         ret = wolfSSL_write(ssl, snd_len, 1);
         err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -308);
 
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
@@ -158,9 +165,10 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
     }
 
     do {
+        MXC_Delay(50000);
         ret = wolfSSL_write(ssl, buffer, len);
         err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -308);
 
 
     if (ret <= 0) {
@@ -185,15 +193,21 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
  * This function must be implemented by your team to align with the security requirements.
 */
 int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, uint8_t* buffer) {
-    uint8_t buf[MAX_I2C_MESSAGE_LEN] = {0};
     int ret = 0;
     int err = 0;
     uint8_t rcv_len[1] = {0};
 
-    tls13_buf *tbuf = ssl_new_buf(address);
-    WOLFSSL_CTX *ctx = ssl_new_context_client();
-    WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
-    ret = ssl_handshake_client(ssl, tbuf);
+    tls13_buf *tbuf; 
+    WOLFSSL_CTX *ctx; 
+    WOLFSSL *ssl; 
+    do {
+        tbuf = ssl_new_buf(address);
+        ctx = ssl_new_context_client();
+        ssl = ssl_new_session(ctx, tbuf);
+        ret = ssl_handshake_client(ssl, tbuf);
+        i2c_simple_write_transmit_done(address, true);
+    } while (ret == -1);
+
 
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
@@ -203,7 +217,7 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     do {
         ret = wolfSSL_read(ssl, rcv_len, 1);
         err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -308);
 
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
@@ -215,7 +229,7 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     do {
         ret = wolfSSL_read(ssl, buffer, t_len);
         err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -308);
 
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
@@ -315,12 +329,15 @@ int scan_components() {
     uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
     // Scan scan command to each component 
-    for (i2c_addr_t addr = 0x8; addr < 0x78; addr++) {
+    // for (i2c_addr_t addr = 0x8; addr < 0x78; addr++) {
+    for (unsigned i = 0; i < flash_status.component_cnt; i++) {
         // I2C Blacklist:
         // 0x18, 0x28, and 0x36 conflict with separate devices on MAX78000FTHR
-        if (addr == 0x18 || addr == 0x28 || addr == 0x36) {
-            continue;
-        }
+        // if (addr == 0x18 || addr == 0x28 || addr == 0x36) {
+        //     continue;
+        // }
+        
+        i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[i]);
 
         // Create command message 
         command_message* command = (command_message*) transmit_buffer;

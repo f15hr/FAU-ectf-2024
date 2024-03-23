@@ -8,14 +8,14 @@
 
 
 
-int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
+int __attribute__((noinline, optimize(0))) i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
 
     tls13_buf *tb = ctx;
 
     if (tb->curr_index == 0) {
         XMEMSET(tb->buf, 0, MAX_RECORD_SIZE);
         I2C_REGS[RECEIVE_DONE][0] = false;
-        I2C_REGS[TRANSMIT_DONE][0] = true;
+        I2C_REGS[TRANSMIT_DONE][0] = false;
         int len = wait_and_receive_packet(tb->buf);
         if (len == ERROR_RETURN) {
             return -1;
@@ -26,7 +26,7 @@ int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     // Handle the case where sz > MAX_I2C_MESSAGE_LEN
     while (tb->data_len < (sz + tb->curr_index)) {
         I2C_REGS[RECEIVE_DONE][0] = false;
-        I2C_REGS[TRANSMIT_DONE][0] = true;
+        I2C_REGS[TRANSMIT_DONE][0] = false;
         int len = wait_and_receive_packet(tb->buf + tb->data_len);
         if (len == ERROR_RETURN) {
             return -1;
@@ -46,7 +46,7 @@ int i2cwolf_receive(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     return sz;
 }
 
-int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
+int __attribute__((noinline, optimize(0))) i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
 
     int ret = sz;
     (void)ctx;
@@ -56,8 +56,8 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     
     // Handle the case where sz > MAX_I2C_MESSAGE_LEN
     while (len > MAX_I2C_MESSAGE_LEN-1) {
-        I2C_REGS[RECEIVE_DONE][0] = false;
-        I2C_REGS[TRANSMIT_DONE][0] = true;
+        I2C_REGS[RECEIVE_DONE][0] = true;
+        I2C_REGS[TRANSMIT_DONE][0] = false;
         send_packet_and_ack(MAX_I2C_MESSAGE_LEN-1, buf + i);
         len -= MAX_I2C_MESSAGE_LEN-1;
         i += MAX_I2C_MESSAGE_LEN-1;
@@ -66,8 +66,8 @@ int i2cwolf_send(WOLFSSL* ssl, char* buf, int sz, void* ctx) {
     if (len == 0)
         return ret;
         
-    I2C_REGS[RECEIVE_DONE][0] = false;
-    I2C_REGS[TRANSMIT_DONE][0] = true;
+    I2C_REGS[RECEIVE_DONE][0] = true;
+    I2C_REGS[TRANSMIT_DONE][0] = false;
     send_packet_and_ack(len, buf + i);
     
     return ret;
@@ -82,7 +82,7 @@ tls13_buf* ssl_new_buf(i2c_addr_t addr) {
 }
 
 
-WOLFSSL_CTX* ssl_new_context_server() {
+WOLFSSL_CTX* __attribute__((noinline, optimize(0))) ssl_new_context_server() {
     WOLFSSL_CTX* ctx;
     ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method());
     if(ctx == NULL) {
@@ -122,7 +122,7 @@ WOLFSSL_CTX* ssl_new_context_server() {
 }
 
 
-WOLFSSL* ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf) {
+WOLFSSL* __attribute__((noinline, optimize(0))) ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf) {
     WOLFSSL *ssl;
     ssl = wolfSSL_new(ctx);
     if(ssl == 0) {
@@ -139,11 +139,14 @@ WOLFSSL* ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf) {
     return ssl;
 }
 
-int ssl_handshake_server(WOLFSSL *ssl, tls13_buf *tbuf) {
+int __attribute__((noinline, optimize(0))) ssl_handshake_server(WOLFSSL *ssl, tls13_buf *tbuf) {
     int ret = 0;
     int err = 0;
 
     MXC_ICC_Enable(MXC_ICC0);
+
+    // I2C_REGS[RECEIVE_DONE][0] = false;
+    // I2C_REGS[TRANSMIT_DONE][0] = false;
 
     do {
         ret = wolfSSL_accept(ssl);
