@@ -25,7 +25,7 @@
 #include "i2c.h"
 
 /******************************** MACRO DEFINITIONS ********************************/
-#define I2C_FREQ 1000000
+#define I2C_FREQ 100000
 #define I2C_INTERFACE MXC_I2C1
 #define MAX_REG TRANSMIT_LEN
 #define MAX_I2C_MESSAGE_LEN 256
