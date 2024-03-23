@@ -47,7 +47,7 @@ i2c_addr_t component_id_to_i2c_addr(uint32_t component_id) {
  * This function utilizes the simple_i2c_peripheral library to
  * send a packet to the AP and wait for the message to be received
 */
-void send_packet_and_ack(uint16_t len, uint8_t* packet) {
+void send_packet_and_ack(uint8_t len, uint8_t* packet) {
     
     // int i = 0;
     // while (len > MAX_I2C_MESSAGE_LEN-1) {
@@ -71,7 +71,6 @@ void send_packet_and_ack(uint16_t len, uint8_t* packet) {
     I2C_REGS[RECEIVE_DONE][0] = false;
 
 }
-
 
 
 /**
