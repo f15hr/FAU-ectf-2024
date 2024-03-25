@@ -138,7 +138,7 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
     uint8_t snd_len[1] = {len};
 
     i2c_simple_write_receive_len(address, 0);
-    i2c_simple_write_transmit_len(address, 0;);
+    i2c_simple_write_transmit_len(address, 0);
 
     wolfSSL_Init();
 
@@ -204,7 +204,7 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     uint8_t rcv_len[1] = {0};
 
     i2c_simple_write_receive_len(address, 0);
-    i2c_simple_write_transmit_len(address, 0;);
+    i2c_simple_write_transmit_len(address, 0);
 
     wolfSSL_Init();
 
@@ -316,6 +316,8 @@ int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
     // Send message
     
     // int result = send_packet(addr, sizeof(uint8_t), transmit);
+    int ping = 
+
     int result = secure_send(addr, transmit, sizeof(uint8_t));
     if (result == ERROR_RETURN) {
         return ERROR_RETURN;
@@ -348,7 +350,7 @@ int scan_components() {
         // I2C Blacklist:
         // 0x18, 0x28, and 0x36 conflict with separate devices on MAX78000FTHR
         // if (addr == 0x18 || addr == 0x28 || addr == 0x36) {
-        //     continue;
+            //     continue;
         // }
         
         i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[i]);
