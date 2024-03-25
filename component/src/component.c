@@ -129,7 +129,7 @@ void __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t
     uint8_t snd_len[1] = {len};
 
     I2C_REGS[TRANSMIT_LEN][0] = 0;
-    // XMEMSET(I2C_REGS[TRANSMIT][0], 0, MAX_I2C_MESSAGE_LEN);
+    I2C_REGS[RECEIVE_LEN][0] = 0;
 
     wolfSSL_Init();
 
@@ -190,6 +190,9 @@ int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
     int ret = 0;
     int err = 0;
     uint8_t rcv_len[1] = {0};
+
+    I2C_REGS[TRANSMIT_LEN][0] = 0;
+    I2C_REGS[RECEIVE_LEN][0] = 0;
 
     wolfSSL_Init();
 

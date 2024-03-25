@@ -137,6 +137,9 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
     int err = 0;
     uint8_t snd_len[1] = {len};
 
+    i2c_simple_write_receive_len(address, 0);
+    i2c_simple_write_transmit_len(address, 0;);
+
     wolfSSL_Init();
 
     tls13_buf *tbuf; 
@@ -199,6 +202,9 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     int ret = 0;
     int err = 0;
     uint8_t rcv_len[1] = {0};
+
+    i2c_simple_write_receive_len(address, 0);
+    i2c_simple_write_transmit_len(address, 0;);
 
     wolfSSL_Init();
 
