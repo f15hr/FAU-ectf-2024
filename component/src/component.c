@@ -122,9 +122,16 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * This function must be implemented by your team to align with the security requirements.
 */
 void __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t len) {
+    i2c_addr_t addr = component_id_to_i2c_addr(COMPONENT_ID);
+    board_link_init(addr);
     int ret = 0;
     int err = 0;
     uint8_t snd_len[1] = {len};
+
+    I2C_REGS[TRANSMIT_LEN][0] = 0;
+    // XMEMSET(I2C_REGS[TRANSMIT][0], 0, MAX_I2C_MESSAGE_LEN);
+
+    wolfSSL_Init();
 
     tls13_buf *tbuf; 
     WOLFSSL_CTX *ctx; 
@@ -151,6 +158,7 @@ void __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t
         return ERROR_RETURN;
     }
 
+
     do {
         ret = wolfSSL_write(ssl, buffer, len);
         err = wolfSSL_get_error(ssl, ret);
@@ -163,6 +171,7 @@ void __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t
     }
 
     ssl_free_all(ctx, ssl, tbuf);
+    wolfSSL_Cleanup();
 
     return ret;
 }
@@ -178,11 +187,11 @@ void __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t
  * This function must be implemented by your team to align with the security requirements.
 */
 int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
-    i2c_addr_t addr = component_id_to_i2c_addr(COMPONENT_ID);
-    board_link_init(addr);
     int ret = 0;
     int err = 0;
     uint8_t rcv_len[1] = {0};
+
+    wolfSSL_Init();
 
     tls13_buf *tbuf; 
     WOLFSSL_CTX *ctx; 
@@ -221,8 +230,8 @@ int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
         return ERROR_RETURN;
     }
 
-
     ssl_free_all(ctx, ssl, tbuf);
+    wolfSSL_Cleanup();
 
     return ret;
 }
