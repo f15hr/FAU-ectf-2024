@@ -600,6 +600,10 @@ void attempt_boot() {
 void attempt_replace() {
     char buf[50];
 
+    if (validate_token()) {
+        return;
+    }
+
     uint32_t component_id_in = 0;
     uint32_t component_id_out = 0;
     /****************************************************************************
