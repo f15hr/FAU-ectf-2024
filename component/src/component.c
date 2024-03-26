@@ -45,34 +45,6 @@
 #define print_info(...) printf("%%info: "); printf(__VA_ARGS__); printf("%%"); fflush(stdout)
 #define print_hex_info(...) printf("%%info: "); print_hex(__VA_ARGS__); printf("%%"); fflush(stdout)
 
-// #define  ARM_CM_DEMCR      (*(uint32_t *)0xE000EDFC)
-// #define  ARM_CM_DWT_CTRL   (*(uint32_t *)0xE0001000)
-// #define  ARM_CM_DWT_CYCCNT (*(uint32_t *)0xE0001004)
-
-
-// if (ARM_CM_DWT_CTRL != 0) {        // See if DWT is available
-
-//             ARM_CM_DEMCR      |= 1 << 24;  // Set bit 24
-//             ARM_CM_DWT_CYCCNT  = 0;
-//             ARM_CM_DWT_CTRL   |= 1 << 0;   // Set bit 0
-
-//         }
-
-// volatile uint32_t start_cc = ARM_CM_DWT_CYCCNT;
-// volatile uint32_t end_cc = ARM_CM_DWT_CYCCNT;
-
-/********************************* CONSTANTS **********************************/
-
-// Passed in through ectf-params.h
-// Example of format of ectf-params.h shown here
-/*
-#define COMPONENT_ID 0x11111124
-#define COMPONENT_BOOT_MSG "Component boot"
-#define ATTESTATION_LOC "McLean"
-#define ATTESTATION_DATE "08/08/08"
-#define ATTESTATION_CUSTOMER "Fritz"
-*/
-
 /******************************** TYPE DEFINITIONS ********************************/
 // Commands received by Component using 32 bit integer
 typedef enum {
@@ -122,15 +94,19 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * This function must be implemented by your team to align with the security requirements.
 */
 void __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t len) {
-    i2c_addr_t addr = component_id_to_i2c_addr(COMPONENT_ID);
-    board_link_init(addr);
     int ret = 0;
     int err = 0;
     uint8_t snd_len[1] = {len};
 
+    // Ensure I2C register flags have expected value.
+    // Sometimes these are not set properly
     I2C_REGS[TRANSMIT_LEN][0] = 0;
     I2C_REGS[RECEIVE_LEN][0] = 0;
 
+    // Init wolfSSL library
+    // Technically we should do this once, but
+    // we want to ensure every invocation of wolfSSL
+    // is a fresh state
     wolfSSL_Init();
 
     tls13_buf *tbuf; 
@@ -143,33 +119,31 @@ void __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t
         ret = ssl_handshake_server(ssl, tbuf);
     } while (ret == -1);
 
-    if (ret <= 0) {
-        ssl_free_all(ctx, ssl, tbuf);
-        return ERROR_RETURN;
-    }
-
+    // Send length of data to transmit via wolfSSL
     do {
         ret = wolfSSL_write(ssl, snd_len, 1);
         err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -308);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
     }
 
-
+    // Send data via wolfSSL
     do {
         ret = wolfSSL_write(ssl, buffer, len);
         err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -308);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
-
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
     }
 
+    // Free all memory
     ssl_free_all(ctx, ssl, tbuf);
     wolfSSL_Cleanup();
 
@@ -191,6 +165,8 @@ int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
     int err = 0;
     uint8_t rcv_len[1] = {0};
 
+    // Ensure I2C register flags have expected value.
+    // Sometimes these are not set properly
     I2C_REGS[TRANSMIT_LEN][0] = 0;
     I2C_REGS[RECEIVE_LEN][0] = 0;
 
@@ -206,16 +182,13 @@ int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
         ret = ssl_handshake_server(ssl, tbuf);
     } while (ret == -1);
 
-    if (ret <= 0) {
-        ssl_free_all(ctx, ssl, tbuf);
-        return ERROR_RETURN;
-    }
-
+    // Get length of data being transmitted via wolfSSL
     do {
         ret = wolfSSL_read(ssl, rcv_len, 1);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
@@ -223,16 +196,19 @@ int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
 
     uint8_t t_len = rcv_len[0];
 
+    // Receive data via wolfSSL
     do {
         ret = wolfSSL_read(ssl, buffer, t_len);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
     }
 
+    // Free all memory
     ssl_free_all(ctx, ssl, tbuf);
     wolfSSL_Cleanup();
 
@@ -304,7 +280,6 @@ void process_boot() {
     uint8_t len = strlen(COMPONENT_BOOT_MSG) + 1;
     memcpy((void*)transmit_buffer, COMPONENT_BOOT_MSG, len);
     secure_send(transmit_buffer, len);
-    // send_packet_and_ack(len, transmit_buffer);
     // Call the boot function
     boot();
 }
@@ -314,7 +289,6 @@ void process_scan() {
     scan_message* packet = (scan_message*) transmit_buffer;
     packet->component_id = COMPONENT_ID;
     secure_send(transmit_buffer, sizeof(scan_message));
-    // send_packet_and_ack(sizeof(scan_message), transmit_buffer);
 }
 
 void process_validate() {
@@ -322,7 +296,6 @@ void process_validate() {
     validate_message* packet = (validate_message*) transmit_buffer;
     packet->component_id = COMPONENT_ID;
     secure_send(transmit_buffer, sizeof(validate_message));
-    // send_packet_and_ack(sizeof(validate_message), transmit_buffer);
 }
 
 void process_attest() {
@@ -361,35 +334,24 @@ int main(void) {
     // Enable Global Interrupts
     __enable_irq();
 
-    // LETS GO PLAID
+    // Increase clock speed to 100 MHz (Hopefully :))
     MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
     
     // Initialize Component
     i2c_addr_t addr = component_id_to_i2c_addr(COMPONENT_ID);
     board_link_init(addr);
 
+    // Initialize the TRNG hardware
     MXC_TRNG_Init();
 
-    // Initialize WOLFSSL
-    int wfInitSuccess = wolfSSL_Init();
-    
-    LED_On(LED2);
-
-    unsigned char echoBuffer[MAX_I2C_MESSAGE_LEN] = {0};
-
-    // secure_receive(echoBuffer);
-    // secure_send(echoBuffer, 255);
-    
+    LED_On(LED2); 
 
     while (1) {
 
         I2C_REGS[TRANSMIT_DONE][0] = false;
 
         wake_comp();
-        
         secure_receive(receive_buffer);
-
-        // I2C_REG[RECEIVE_DONE] == 1 here...why?
         component_process_cmd();
     }
 }

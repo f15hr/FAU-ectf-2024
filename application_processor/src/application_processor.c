@@ -137,9 +137,15 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
     int err = 0;
     uint8_t snd_len[1] = {len};
 
+    // Ensure I2C register flags have expected value.
+    // Sometimes these are not set properly
     i2c_simple_write_receive_len(address, 0);
     i2c_simple_write_transmit_len(address, 0);
 
+    // Init wolfSSL library
+    // Technically we should do this once, but
+    // we want to ensure every invocation of wolfSSL
+    // is a fresh state
     wolfSSL_Init();
 
     tls13_buf *tbuf; 
@@ -149,38 +155,43 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
         tbuf = ssl_new_buf(address);
         ctx = ssl_new_context_client();
         ssl = ssl_new_session(ctx, tbuf);
+        // Need to delay the AP to ensure the component is 
+        // in its loop before proceeding
+        MXC_Delay(5000);
         ret = ssl_handshake_client(ssl, tbuf);
     } while (ret == -1);
 
-
-    if (ret <= 0) {
-        ssl_free_all(ctx, ssl, tbuf);
-        return ERROR_RETURN;
-    }
-
+    // Send length of data to transmit via wolfSSL
     do {
+        // Need to delay the AP to ensure the component is 
+        // in its loop before proceeding
         MXC_Delay(5000);
         ret = wolfSSL_write(ssl, snd_len, 1);
         err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -308);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
     }
 
+    // Send data via wolfSSL
     do {
+        // Need to delay the AP to ensure the component is 
+        // in its loop before proceeding
         MXC_Delay(5000);
         ret = wolfSSL_write(ssl, buffer, len);
         err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -308);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
-
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
     }
 
+    // Free all memory
     ssl_free_all(ctx, ssl, tbuf);
     wolfSSL_Cleanup();
 
@@ -203,9 +214,15 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     int err = 0;
     uint8_t rcv_len[1] = {0};
 
+    // Ensure I2C register flags have expected value.
+    // Sometimes these are not set properly
     i2c_simple_write_receive_len(address, 0);
     i2c_simple_write_transmit_len(address, 0);
 
+    // Init wolfSSL library
+    // Technically we should do this once, but
+    // we want to ensure every invocation of wolfSSL
+    // is a fresh state
     wolfSSL_Init();
 
     tls13_buf *tbuf; 
@@ -215,22 +232,22 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
         tbuf = ssl_new_buf(address);
         ctx = ssl_new_context_client();
         ssl = ssl_new_session(ctx, tbuf);
+        // Need to delay the AP to ensure the component is 
+        // in its loop before proceeding
         MXC_Delay(5000);
         ret = ssl_handshake_client(ssl, tbuf);
     } while (ret == -1);
 
-
-    if (ret <= 0) {
-        ssl_free_all(ctx, ssl, tbuf);
-        return ERROR_RETURN;
-    }
-
+    // Get length of data being transmitted via wolfSSL
     do {
+        // Need to delay the AP to ensure the component is 
+        // in its loop before proceeding
         MXC_Delay(5000);
         ret = wolfSSL_read(ssl, rcv_len, 1);
         err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -180);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
@@ -238,17 +255,22 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
 
     uint8_t t_len = rcv_len[0];
 
+    // Receive data via wolfSSL
     do {
+        // Need to delay the AP to ensure the component is 
+        // in its loop before proceeding
         MXC_Delay(5000);
         ret = wolfSSL_read(ssl, buffer, t_len);
         err = wolfSSL_get_error(ssl, ret);
-    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -180);
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
     }
 
+    // Free all memory
     ssl_free_all(ctx, ssl, tbuf);
     wolfSSL_Cleanup();
 
@@ -302,27 +324,19 @@ void init() {
     // Initialize board link interface
     board_link_init();
 
-    // Init TRNG
+    // Initialize the TRNG hardware
     MXC_TRNG_Init();
-
-    // Initialize WOLFSSL
-    int wfInitSuccess = wolfSSL_Init();
-
-
 }
 
 // Send a command to a component and receive the result
 int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
     // Send message
-    
-    // int result = send_packet(addr, sizeof(uint8_t), transmit);
     int result = secure_send(addr, transmit, sizeof(uint8_t));
     if (result == ERROR_RETURN) {
         return ERROR_RETURN;
     }
     
     // Receive message
-    // int len = poll_and_receive_packet(addr, receive);
     int len = secure_receive(addr, receive);
     if (len == ERROR_RETURN) {
         return ERROR_RETURN;
@@ -330,7 +344,13 @@ int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
     return len;
 }
 
-// Send a command to a component and receive the result
+/**
+ * @brief Issues a wake command to the component
+ * 
+ * @param i2c_addr_t addr: The address of the component to wake up
+ * 
+ * @return int: Number of bytes received from the component
+*/
 int issue_wake(i2c_addr_t addr) {
     // Send message
     uint8_t transmit[1] = {0x11};
@@ -363,7 +383,6 @@ int scan_components() {
 
     // Scan scan command to each component 
     for (i2c_addr_t addr = 0x8; addr < 0x78; addr++) {
-    // for (unsigned i = 0; i < flash_status.component_cnt; i++) {
         // I2C Blacklist:
         // 0x18, 0x28, and 0x36 conflict with separate devices on MAX78000FTHR
         if (addr == 0x18 || addr == 0x28 || addr == 0x36) {
@@ -667,38 +686,8 @@ int main() {
     // Initialize board
     init();
 
-    // LETS GO PLAID
+    // Increase clock speed to 100 MHz (Hopefully :))
     MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
-
-    // test trng
-    uint8_t var_rnd_no[16] = {0};
-    MXC_TRNG_Random(var_rnd_no, 16);
-
-    volatile unsigned int rng_test = get_random_trng();
-
-    // test wolfSSL
-    // WOLFSSL_CTX* ctx;
-    // WOLFSSL* ssl;
-    // tls13_buf *tbuf;
-    int ret = 0;
-    int err = 0;
-
-    const char testStrCmp1[255] = "2c678ef5d16e9ba734cac406a5e145840a38dea53420cbe79fd5bc3bcaa6e4b9dd03b2b3a08ceff0aec824c251ea7ab27730abb275e51ab12a1c7247034af71c40c2bbb2c12a95946137f6045c1303bfb8dffe4f488e913e8632c9ccd2a3dcc08fc3f4a32d9ad736293744c67fe55eba0ccc8ff576e1333cbfb9ef3deeaf65f";
-    const char testStrCmp2[] = "CMP2: Testing Component\r\n";
-    unsigned char readBuf[MAX_I2C_MESSAGE_LEN] = {0};
-
-    /***********************************************
-     * Test connection with component 1 (0x11111124)
-    ***********************************************/
-    // secure_send(component_id_to_i2c_addr(0x11111124), testStrCmp1, 255);
-    // secure_receive(component_id_to_i2c_addr(0x11111124), readBuf);
-
-    /***********************************************
-     * Test connection with component 2 (0x11111125)
-    ***********************************************/
-    // secure_send(component_id_to_i2c_addr(0x11111125), testStrCmp1, XSTRLEN(testStrCmp1));
-    // secure_receive(component_id_to_i2c_addr(0x11111125), readBuf);
-
     
     #ifdef CRYPTO_EXAMPLE
         print_debug("CRYPTO_EXAMPLE enabled");

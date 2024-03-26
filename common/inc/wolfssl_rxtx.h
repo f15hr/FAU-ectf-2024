@@ -21,4 +21,4 @@ WOLFSSL_CTX* ssl_new_context_server();
 WOLFSSL* ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf);
 int ssl_handshake_client(WOLFSSL *ssl, tls13_buf *tbuf);
 int ssl_handshake_server(WOLFSSL *ssl, tls13_buf *tbuf);
-int ssl_free_all(WOLFSSL_CTX *ctx, WOLFSSL *ssl, tls13_buf *tbuf);
+void ssl_free_all(WOLFSSL_CTX *ctx, WOLFSSL *ssl, tls13_buf *tbuf);
