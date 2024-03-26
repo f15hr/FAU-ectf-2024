@@ -232,6 +232,31 @@ elif [ $1 = "openocd" ]; then
         openocd -f debug/device_cmp2.cfg > /dev/null 2>&1 & 
     fi
 
+elif [ $1 = "list" ]; then
+
+    poetry run ectf_list \
+    -a "/dev/$2" 
+
+elif [ $1 = "boot" ]; then
+
+    poetry run ectf_boot \
+    -a "/dev/$2" 
+
+elif [ $1 = "replace" ]; then
+
+    poetry run ectf_replace \
+    -a "/dev/$2" \
+    -t "0123456789abcdef" \
+    -i "$3" \
+    -o "$4" 
+
+elif [ $1 = "attest" ]; then
+
+    poetry run ectf_attestation \
+    -a "/dev/$2" \
+    -p "123456" \
+    -c "$3" 
+
 else 
 
     echo "$1 is not a valid parameter"
