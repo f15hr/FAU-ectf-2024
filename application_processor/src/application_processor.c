@@ -47,16 +47,6 @@
 
 /********************************* CONSTANTS **********************************/
 
-// Passed in through ectf-params.h
-// Example of format of ectf-params.h shown here
-/*
-#define AP_PIN "123456"
-#define AP_TOKEN "0123456789abcdef"
-#define COMPONENT_IDS 0x11111124, 0x11111125
-#define COMPONENT_CNT 2
-#define AP_BOOT_MSG "Test boot message"
-*/
-
 // Flash Macros
 #define FLASH_ADDR ((MXC_FLASH_MEM_BASE + MXC_FLASH_MEM_SIZE) - (2 * MXC_FLASH_PAGE_SIZE))
 #define FLASH_MAGIC 0xDEADBEEF
@@ -64,20 +54,6 @@
 // Library call return types
 #define SUCCESS_RETURN 0
 #define ERROR_RETURN -1
-
-// #define  ARM_CM_DEMCR      (*(uint32_t *)0xE000EDFC)
-// #define  ARM_CM_DWT_CTRL   (*(uint32_t *)0xE0001000)
-// #define  ARM_CM_DWT_CYCCNT (*(uint32_t *)0xE0001004)
-// if (ARM_CM_DWT_CTRL != 0) {        // See if DWT is available
-//           ARM_CM_DEMCR      |= 1 << 24;  // Set bit 24
-//           ARM_CM_DWT_CYCCNT  = 0;
-//           ARM_CM_DWT_CTRL   |= 1 << 0;   // Set bit 0
-//       }
-// volatile uint32_t start_cc = ARM_CM_DWT_CYCCNT;
-// MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
-// volatile int start_cc = *STCVR;
-// volatile int end_cc = *STCVR;
-// printf("%d", start_cc = end_cc);
 
 /******************************** TYPE DEFINITIONS ********************************/
 // Data structure for sending commands to component
