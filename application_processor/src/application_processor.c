@@ -408,7 +408,9 @@ int validate_components() {
 
         // Create command message
         command_message* command = (command_message*) transmit_buffer;
-        command->opcode = COMPONENT_CMD_VALIDATE;
+        // command->opcode = COMPONENT_CMD_VALIDATE;
+        command->opcode = COMPONENT_CMD_BOOT;
+
 
         int len = issue_wake(addr);
 
@@ -427,8 +429,7 @@ int validate_components() {
                 print_error("Component ID: 0x%08x invalid\n", flash_status.component_ids[i]);
                 return ERROR_RETURN;
             }
-
-        }
+        } else return ERROR_RETURN;
     }
     return SUCCESS_RETURN;
 }
@@ -436,7 +437,6 @@ int validate_components() {
 int boot_components() {
     // Buffers for board link communication
     uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
-    uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
     // Send boot command to each component
     for (unsigned i = 0; i < flash_status.component_cnt; i++) {
@@ -444,8 +444,6 @@ int boot_components() {
         i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[i]);
         
         // Create command message
-        command_message* command = (command_message*) transmit_buffer;
-        command->opcode = COMPONENT_CMD_BOOT;
         
         // Send out command and receive result
         // int len = issue_cmd(addr, transmit_buffer, receive_buffer);
@@ -585,8 +583,6 @@ void attempt_boot() {
         print_error("Failed to boot all components\n");
         return;
     }
-
-
 
     // Print boot message
     // This always needs to be printed when booting
