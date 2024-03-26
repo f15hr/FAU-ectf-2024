@@ -62,7 +62,7 @@ PROJ_CFLAGS += -DWOLFSSL_USER_SETTINGS -DTIME_T_NOT_64BIT -DWOLFSSL_LOAD_FLAG_DA
 # -mstack-protector-guard=global <-- replace global with specifics? 
 #  "Supported locations are 'global' for a global canary or 'sysreg' for a canary in an appropriate system register."
 
-PROJ_CFLAGS += -D_FORTIFY_SOURCE=2 -mstack-protector-guard=global
+PROJ_CFLAGS += -D_FORTIFY_SOURCE=3 -mstack-protector-guard=global
 
 #-DLARGE_STATIC_BUFFERS
 
