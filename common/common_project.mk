@@ -50,6 +50,20 @@ DEBUG = 1
 
 PROJ_CFLAGS += -DWOLFSSL_USER_SETTINGS -DTIME_T_NOT_64BIT -DWOLFSSL_LOAD_FLAG_DATE_ERR_OKAY 
 
+############## STACK PROTECTION AND SECURITY FLAGS ##############
+# -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Werror=format-security
+#  ^THANKS CMU ive removed some of the warning to errors one because i needed to test and it isnt working. hopefully we can remove those issues l84
+#  TODO PUT WARINGS TO ERRORS BACK!!!
+#  -mshstk X DOESNT WORK
+#  ^SHADOW STACK
+#  -fcf-protection=full X NOT SUPPORTED
+#  ^CONTROL FLOW INTEGRETY
+#  https://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html
+# -mstack-protector-guard=global <-- replace global with specifics? 
+#  "Supported locations are 'global' for a global canary or 'sysreg' for a canary in an appropriate system register."
+
+PROJ_CFLAGS += -D_FORTIFY_SOURCE=2 -mstack-protector-guard=global
+
 #-DLARGE_STATIC_BUFFERS
 
 # Enable "DEBUG" symbol in .c files
