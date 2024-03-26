@@ -300,6 +300,7 @@ void component_process_cmd() {
 void process_boot() {
     // The AP requested a boot. Set `component_boot` for the main loop and
     // respond with the boot message
+    process_validate();
     uint8_t len = strlen(COMPONENT_BOOT_MSG) + 1;
     memcpy((void*)transmit_buffer, COMPONENT_BOOT_MSG, len);
     secure_send(transmit_buffer, len);
@@ -325,11 +326,31 @@ void process_validate() {
 }
 
 void process_attest() {
+    // process_validate();
     // The AP requested attestation. Respond with the attestation data
+
+    /****************************************************************************
+     * TODO: CHECK SPRINTF MIGHT BE SUS.
+    ****************************************************************************/
     uint8_t len = sprintf((char*)transmit_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
     secure_send(transmit_buffer, len);
     // send_packet_and_ack(len, transmit_buffer);
+}
+
+// receive and command from ap and send acknowledgement
+int wake_comp() {
+    // Send message
+    uint8_t data[1] = {0};
+    
+    int len = wait_and_receive_packet(data);
+    if (len == ERROR_RETURN) {
+        return ERROR_RETURN;
+    }
+
+    send_packet_and_ack(len, data);
+
+    return len;
 }
 
 /*********************************** MAIN *************************************/
@@ -361,6 +382,11 @@ int main(void) {
     
 
     while (1) {
+
+        I2C_REGS[TRANSMIT_DONE][0] = false;
+
+        wake_comp();
+        
         secure_receive(receive_buffer);
 
         // I2C_REG[RECEIVE_DONE] == 1 here...why?

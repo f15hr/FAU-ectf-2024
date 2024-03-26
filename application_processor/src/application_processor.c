@@ -159,7 +159,7 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
     }
 
     do {
-        MXC_Delay(50000);
+        MXC_Delay(5000);
         ret = wolfSSL_write(ssl, snd_len, 1);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -308);
@@ -170,7 +170,7 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
     }
 
     do {
-        MXC_Delay(50000);
+        MXC_Delay(5000);
         ret = wolfSSL_write(ssl, buffer, len);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -308);
@@ -215,7 +215,7 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
         tbuf = ssl_new_buf(address);
         ctx = ssl_new_context_client();
         ssl = ssl_new_session(ctx, tbuf);
-        MXC_Delay(500000);
+        MXC_Delay(5000);
         ret = ssl_handshake_client(ssl, tbuf);
     } while (ret == -1);
 
@@ -226,7 +226,7 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     }
 
     do {
-        MXC_Delay(50000);
+        MXC_Delay(5000);
         ret = wolfSSL_read(ssl, rcv_len, 1);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -180);
@@ -239,7 +239,7 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     uint8_t t_len = rcv_len[0];
 
     do {
-        MXC_Delay(50000);
+        MXC_Delay(5000);
         ret = wolfSSL_read(ssl, buffer, t_len);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE || err == -180);
@@ -330,6 +330,25 @@ int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
     return len;
 }
 
+// Send a command to a component and receive the result
+int issue_wake(i2c_addr_t addr) {
+    // Send message
+    uint8_t transmit[1] = {0x11};
+    uint8_t receive[1] = {0};
+
+    int result = send_packet(addr, sizeof(uint8_t), transmit);
+    if (result == ERROR_RETURN) {
+        return ERROR_RETURN;
+    }
+    
+    // Receive message
+    int len = poll_and_receive_packet(addr, receive);
+    if (len == ERROR_RETURN) {
+        return ERROR_RETURN;
+    }
+    return len;
+}
+
 /******************************** COMPONENT COMMS ********************************/
 
 int scan_components() {
@@ -339,31 +358,38 @@ int scan_components() {
     }
 
     // Buffers for board link communication
-    uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
-    uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
+    uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN] = {0};
+    uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN] = {0};
 
     // Scan scan command to each component 
-    // for (i2c_addr_t addr = 0x8; addr < 0x78; addr++) {
-    for (unsigned i = 0; i < flash_status.component_cnt; i++) {
+    for (i2c_addr_t addr = 0x8; addr < 0x78; addr++) {
+    // for (unsigned i = 0; i < flash_status.component_cnt; i++) {
         // I2C Blacklist:
         // 0x18, 0x28, and 0x36 conflict with separate devices on MAX78000FTHR
-        // if (addr == 0x18 || addr == 0x28 || addr == 0x36) {
-            //     continue;
-        // }
+        if (addr == 0x18 || addr == 0x28 || addr == 0x36) {
+                continue;
+        }
         
-        i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[i]);
+        // i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[i]);
 
-        // Create command message 
-        command_message* command = (command_message*) transmit_buffer;
-        command->opcode = COMPONENT_CMD_SCAN;
-        
-        // Send out command and receive result
-        int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+        // check if device is present
+        int len = issue_wake(addr);
 
         // Success, device is present
         if (len > 0) {
-            scan_message* scan = (scan_message*) receive_buffer;
-            print_info("F>0x%08x\n", scan->component_id);
+
+            // Create command message 
+            command_message* command = (command_message*) transmit_buffer;
+            command->opcode = COMPONENT_CMD_SCAN;
+
+            // Send out command and receive result
+            int res = issue_cmd(addr, transmit_buffer, receive_buffer);
+
+            // Success, device is present
+            if (res > 0) {
+                scan_message* scan = (scan_message*) receive_buffer;
+                print_info("F>0x%08x\n", scan->component_id);
+            }
         }
     }
     print_success("List\n");
@@ -383,19 +409,25 @@ int validate_components() {
         // Create command message
         command_message* command = (command_message*) transmit_buffer;
         command->opcode = COMPONENT_CMD_VALIDATE;
-        
-        // Send out command and receive result
-        int len = issue_cmd(addr, transmit_buffer, receive_buffer);
-        if (len == ERROR_RETURN) {
-            print_error("Could not validate component\n");
-            return ERROR_RETURN;
-        }
 
-        validate_message* validate = (validate_message*) receive_buffer;
-        // Check that the result is correct
-        if (validate->component_id != flash_status.component_ids[i]) {
-            print_error("Component ID: 0x%08x invalid\n", flash_status.component_ids[i]);
-            return ERROR_RETURN;
+        int len = issue_wake(addr);
+
+        if (len > 0) {    
+        
+            // Send out command and receive result
+            int res = issue_cmd(addr, transmit_buffer, receive_buffer);
+            if (res == ERROR_RETURN) {
+                print_error("Could not validate component\n");
+                return ERROR_RETURN;
+            }
+
+            validate_message* validate = (validate_message*) receive_buffer;
+            // Check that the result is correct
+            if (validate->component_id != flash_status.component_ids[i]) {
+                print_error("Component ID: 0x%08x invalid\n", flash_status.component_ids[i]);
+                return ERROR_RETURN;
+            }
+
         }
     }
     return SUCCESS_RETURN;
@@ -416,7 +448,8 @@ int boot_components() {
         command->opcode = COMPONENT_CMD_BOOT;
         
         // Send out command and receive result
-        int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+        // int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+        int len = secure_receive(addr, receive_buffer);
         if (len == ERROR_RETURN) {
             print_error("Could not boot component\n");
             return ERROR_RETURN;
@@ -440,17 +473,21 @@ int attest_component(uint32_t component_id) {
     command_message* command = (command_message*) transmit_buffer;
     command->opcode = COMPONENT_CMD_ATTEST;
 
-    // Send out command and receive result
-    int len = issue_cmd(addr, transmit_buffer, receive_buffer);
-    if (len == ERROR_RETURN) {
-        print_error("Could not attest component\n");
-        return ERROR_RETURN;
-    }
+    int len = issue_wake(addr);
 
-    // Print out attestation data 
-    print_info("C>0x%08x\n", component_id);
-    print_info("%s", receive_buffer);
-    return SUCCESS_RETURN;
+    if (len > 0) {
+        // Send out command and receive result
+        int res = issue_cmd(addr, transmit_buffer, receive_buffer);
+        if (res == ERROR_RETURN) {
+            print_error("Could not attest component\n");
+            return ERROR_RETURN;
+        }
+
+        // Print out attestation data 
+        print_info("C>0x%08x\n", component_id);
+        print_info("%s", receive_buffer);
+        return SUCCESS_RETURN;
+    }
 }
 
 /********************************* AP LOGIC ***********************************/
@@ -563,17 +600,26 @@ void attempt_boot() {
 void attempt_replace() {
     char buf[50];
 
-    if (validate_token()) {
-        return;
-    }
-
     uint32_t component_id_in = 0;
     uint32_t component_id_out = 0;
-
+    /****************************************************************************
+     * TODO: BUFFER OVERFLOW CHECKS.
+    ****************************************************************************/
+    
     recv_input("Component ID In: ", buf);
     sscanf(buf, "%x", &component_id_in);
     recv_input("Component ID Out: ", buf);
     sscanf(buf, "%x", &component_id_out);
+
+    /****************************************************************************
+     * TODO: CUSTOM validate that will also check for Component ID in and out.
+     * TODO: Check against if comp in has the same address as comp out.
+     * TODO: Figure something out.
+    ****************************************************************************/
+    // if (validate_components()) {
+    //     print_error("Components could not be validated\n");
+    //     return;
+    // }
 
     // Find the component to swap out
     for (unsigned i = 0; i < flash_status.component_cnt; i++) {
@@ -599,6 +645,10 @@ void attempt_replace() {
 // Attest a component if the PIN is correct
 void attempt_attest() {
     char buf[50];
+    // if (validate_components()) {
+    //     print_error("Components could not be validated\n");
+    //     return;
+    // }
 
     if (validate_pin()) {
         return;
@@ -666,7 +716,6 @@ int main() {
         // Execute requested command
         if (!strcmp(buf, "list")) {
             scan_components();
-
         } else if (!strcmp(buf, "boot")) {
             attempt_boot();
         } else if (!strcmp(buf, "replace")) {
