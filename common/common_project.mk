@@ -52,12 +52,7 @@ PROJ_CFLAGS += -DWOLFSSL_USER_SETTINGS -DTIME_T_NOT_64BIT -DWOLFSSL_LOAD_FLAG_DA
 
 ############## STACK PROTECTION AND SECURITY FLAGS ##############
 # -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Werror=format-security
-#  ^THANKS CMU ive removed some of the warning to errors one because i needed to test and it isnt working. hopefully we can remove those issues l84
-#  TODO PUT WARINGS TO ERRORS BACK!!!
-#  -mshstk X DOESNT WORK
-#  ^SHADOW STACK
-#  -fcf-protection=full X NOT SUPPORTED
-#  ^CONTROL FLOW INTEGRETY
+#  ^THANKS CMU
 #  https://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html
 # -mstack-protector-guard=global <-- replace global with specifics? 
 #  "Supported locations are 'global' for a global canary or 'sysreg' for a canary in an appropriate system register."
