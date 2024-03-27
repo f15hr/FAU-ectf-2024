@@ -302,6 +302,13 @@ void init() {
 
     // Initialize the TRNG hardware
     MXC_TRNG_Init();
+
+    // Disable the audio jacks
+    MXC_I2S_TXDisable();
+    MXC_I2S_RXDisable();
+
+    // Disable camera
+    MXC_PCIF_Stop();
 }
 
 // Send a command to a component and receive the result
