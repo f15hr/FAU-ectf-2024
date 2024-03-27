@@ -18,7 +18,8 @@ void recv_input(const char *msg, char *buf) {
     print_debug(msg);
     fflush(0);
     print_ack();
-    gets(buf);
+    fgets(buf, sizeof(buf), stdin);
+    //gets(buf);
     puts("");
 }
 
