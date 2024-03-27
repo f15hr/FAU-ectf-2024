@@ -59,8 +59,9 @@
 
 // Buffer sizes
 #define BUFFER_CMD_SIZE 20
-#define BUFFER_SCRT_SIZE 32
-
+#define BUFFER_HASH_SIZE 32
+#define BUFFER_PIN_SIZE 3
+#define BUFFER_TOKEN_SIZE 8
 /******************************** TYPE DEFINITIONS ********************************/
 // Data structure for sending commands to component
 // Params allows for up to MAX_I2C_MESSAGE_LEN - 1 bytes to be send
@@ -560,27 +561,39 @@ void boot() {
 
 // Compare the entered PIN to the correct PIN
 int validate_pin(char *buf) {
+    char hash[BUFFER_HASH_SIZE] = {0};
     recv_input("Enter pin: ", buf);
-    if (!XSTRNCMP(buf, AP_PIN, BUFFER_SCRT_SIZE)) {
+
+    if (!wc_Sha256Hash(buf, BUFFER_PIN_SIZE, hash)){
+        return ERROR_RETURN;
+    }
+
+    if (!XSTRNCMP(bash, AP_PIN, BUFFER_HASH_SIZE)) {
         print_debug("Pin Accepted!\n");
-        XMEMSET(buf, 0, BUFFER_SCRT_SIZE);
+        XMEMSET(buf, 0, BUFFER_PIN_SIZE);
         return SUCCESS_RETURN;
     }
     print_error("Invalid PIN!\n");
-    XMEMSET(buf, 0, BUFFER_SCRT_SIZE);
+    XMEMSET(buf, 0, BUFFER_PIN_SIZE);
     return ERROR_RETURN;
 }
 
 // Function to validate the replacement token
 int validate_token(char *buf) {
+    char hash[BUFFER_HASH_SIZE] = {0};
     recv_input("Enter token: ", buf);
-    if (!XSTRNCMP(buf, AP_TOKEN, BUFFER_SCRT_SIZE)) {
+
+    if (!wc_Sha256Hash(buf, BUFFER_TOKEN_SIZE, hash)){
+        return ERROR_RETURN;
+    }
+
+    if (!XSTRNCMP(hash, AP_TOKEN, BUFFER_HASH_SIZE)) {
         print_debug("Token Accepted!\n");
-        XMEMSET(buf, 0, BUFFER_CMD_SIZE);
+        XMEMSET(buf, 0, BUFFER_TOKEN_SIZE);
         return SUCCESS_RETURN;
     }
     print_error("Invalid Token!\n");
-    XMEMSET(buf, 0, BUFFER_CMD_SIZE);
+    XMEMSET(buf, 0, BUFFER_TOKEN_SIZE);
     return ERROR_RETURN;
 }
 
@@ -690,7 +703,8 @@ int main() {
 
     // Handle commands forever
     char cmd_buf[BUFFER_CMD_SIZE] = {0};
-    char scrt_buf[BUFFER_SCRT_SIZE] = {0};
+    char pin_buf[BUFFER_PIN_SIZE] = {0};
+    char token_buf[BUFFER_TOKEN_SIZE] = {0};
     while (1) {
         recv_input("Enter Command: ", cmd_buf);
 
@@ -700,9 +714,9 @@ int main() {
         } else if (!XSTRNCMP(cmd_buf, "boot", sizeof cmd_buf)) {
             attempt_boot();
         } else if (!XSTRNCMP(cmd_buf, "replace", sizeof cmd_buf)) {
-            attempt_replace(scrt_buf);
+            attempt_replace(token_buf);
         } else if (!XSTRNCMP(cmd_buf, "attest", sizeof cmd_buf)) {
-            attempt_attest(scrt_buf);
+            attempt_attest(pin_buf);
         } else {
             print_error("Unrecognized command '%s'\n", cmd_buf);
         }
