@@ -15,6 +15,8 @@
 #include "i2c.h"
 #include "icc.h"
 #include "led.h"
+#include "i2s.h"
+#include "cameraif.h"
 #include "mxc_delay.h"
 #include "mxc_device.h"
 #include "nvic_table.h"
