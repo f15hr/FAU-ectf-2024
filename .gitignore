@@ -1,5 +1,5 @@
 ## Project .gitignore ##
-
+ectf_params.h
 .DS_Store
 .vscode/
 **/gcc
@@ -7,10 +7,14 @@ deployment/certs/*
 **/build/certs
 *.drawio.bkp
 secrets_*
-*.pem
-*.key
-*.crt
-*.csr
+application_processor/**/*.pem
+application_processor/**/*.key
+application_processor/**/*.crt
+application_processor/**/*.csr
+component/**/*.pem
+component/**/*.key
+component/**/*.crt
+component/**/*.csr
 
 !device/lib
 
