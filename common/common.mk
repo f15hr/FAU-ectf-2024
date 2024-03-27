@@ -6,7 +6,6 @@ SSLHEADER_FILE = $(abspath ../application_processor/inc/secrets_ap.h)
 BUILD_DIR = $(abspath ../application_processor/build)
 HASH_SCRTS = $(abspath ../application_processor/hash_secrets.py)
 _ := $(shell python "$(HASH_SCRTS)")
-# $(error $(SUCK_IT))
 
 else ifeq ($(DEVICE), COMPONENT)
 WOLFSSL_DIR := $(abspath ../common/wolfssl/IDE/MAX78000_Server/)
