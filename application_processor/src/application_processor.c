@@ -561,7 +561,7 @@ void boot() {
 // Compare the entered PIN to the correct PIN
 int validate_pin(char *buf) {
     recv_input("Enter pin: ", buf);
-    if (!XSTRNCMP(buf, AP_PIN, MAX_I2C_MESSAGE_LEN-1)) {
+    if (!XSTRNCMP(buf, AP_PIN, BUFFER_SCRT_SIZE)) {
         print_debug("Pin Accepted!\n");
         XMEMSET(buf, 0, BUFFER_SCRT_SIZE);
         return SUCCESS_RETURN;
@@ -574,7 +574,7 @@ int validate_pin(char *buf) {
 // Function to validate the replacement token
 int validate_token(char *buf) {
     recv_input("Enter token: ", buf);
-    if (!XSTRNCMP(buf, AP_TOKEN, MAX_I2C_MESSAGE_LEN-1)) {
+    if (!XSTRNCMP(buf, AP_TOKEN, BUFFER_SCRT_SIZE)) {
         print_debug("Token Accepted!\n");
         XMEMSET(buf, 0, BUFFER_CMD_SIZE);
         return SUCCESS_RETURN;
