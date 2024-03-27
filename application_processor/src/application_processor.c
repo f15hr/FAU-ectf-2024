@@ -57,6 +57,10 @@
 #define SUCCESS_RETURN 0
 #define ERROR_RETURN -1
 
+// Buffer sizes
+#define BUFFER_CMD_SIZE 20
+#define BUFFER_SCRT_SIZE 32
+
 /******************************** TYPE DEFINITIONS ********************************/
 // Data structure for sending commands to component
 // Params allows for up to MAX_I2C_MESSAGE_LEN - 1 bytes to be send
@@ -555,26 +559,28 @@ void boot() {
 }
 
 // Compare the entered PIN to the correct PIN
-int validate_pin() {
-    char buf[50];
+int validate_pin(char *buf) {
     recv_input("Enter pin: ", buf);
-    if (!strcmp(buf, AP_PIN)) {
+    if (!XSTRNCMP(buf, AP_PIN, MAX_I2C_MESSAGE_LEN-1)) {
         print_debug("Pin Accepted!\n");
+        XMEMSET(buf, 0, BUFFER_SCRT_SIZE);
         return SUCCESS_RETURN;
     }
     print_error("Invalid PIN!\n");
+    XMEMSET(buf, 0, BUFFER_SCRT_SIZE);
     return ERROR_RETURN;
 }
 
 // Function to validate the replacement token
-int validate_token() {
-    char buf[50];
+int validate_token(char *buf) {
     recv_input("Enter token: ", buf);
-    if (!strcmp(buf, AP_TOKEN)) {
+    if (!XSTRNCMP(buf, AP_TOKEN, MAX_I2C_MESSAGE_LEN-1)) {
         print_debug("Token Accepted!\n");
+        XMEMSET(buf, 0, BUFFER_CMD_SIZE);
         return SUCCESS_RETURN;
     }
     print_error("Invalid Token!\n");
+    XMEMSET(buf, 0, BUFFER_CMD_SIZE);
     return ERROR_RETURN;
 }
 
@@ -599,10 +605,9 @@ void attempt_boot() {
 }
 
 // Replace a component if the PIN is correct
-void attempt_replace() {
-    char buf[50];
+void attempt_replace(char* buf) {
 
-    if (validate_token()) {
+    if (validate_token(buf)) {
         return;
     }
 
@@ -649,14 +654,13 @@ void attempt_replace() {
 }
 
 // Attest a component if the PIN is correct
-void attempt_attest() {
-    char buf[50];
+void attempt_attest(char *buf) {
     // if (validate_components()) {
     //     print_error("Components could not be validated\n");
     //     return;
     // }
 
-    if (validate_pin()) {
+    if (validate_pin(buf)) {
         return;
     }
     uint32_t component_id;
@@ -685,21 +689,22 @@ int main() {
     print_info("Application Processor Started\n");
 
     // Handle commands forever
-    char buf[100];
+    char cmd_buf[BUFFER_CMD_SIZE] = {0};
+    char scrt_buf[BUFFER_SCRT_SIZE] = {0};
     while (1) {
-        recv_input("Enter Command: ", buf);
+        recv_input("Enter Command: ", cmd_buf);
 
         // Execute requested command
-        if (!strcmp(buf, "list")) {
+        if (!XSTRNCMP(cmd_buf, "list", sizeof cmd_buf)) {
             scan_components();
-        } else if (!strcmp(buf, "boot")) {
+        } else if (!XSTRNCMP(cmd_buf, "boot", sizeof cmd_buf)) {
             attempt_boot();
-        } else if (!strcmp(buf, "replace")) {
-            attempt_replace();
-        } else if (!strcmp(buf, "attest")) {
-            attempt_attest();
+        } else if (!XSTRNCMP(cmd_buf, "replace", sizeof cmd_buf)) {
+            attempt_replace(scrt_buf);
+        } else if (!XSTRNCMP(cmd_buf, "attest", sizeof cmd_buf)) {
+            attempt_attest(scrt_buf);
         } else {
-            print_error("Unrecognized command '%s'\n", buf);
+            print_error("Unrecognized command '%s'\n", cmd_buf);
         }
     }
 
