@@ -568,7 +568,7 @@ int validate_pin(char *buf) {
         return ERROR_RETURN;
     }
 
-    if (!XSTRNCMP(bash, AP_PIN, BUFFER_HASH_SIZE)) {
+    if (!XSTRNCMP(hash, AP_PIN, BUFFER_HASH_SIZE)) {
         print_debug("Pin Accepted!\n");
         XMEMSET(buf, 0, BUFFER_PIN_SIZE);
         return SUCCESS_RETURN;
