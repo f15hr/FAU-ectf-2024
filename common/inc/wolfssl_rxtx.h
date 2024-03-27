@@ -1,7 +1,5 @@
 #include "wolfssl/wolfssl/ssl.h"
 
-extern i2c_addr_t;
-
 #ifndef MAX_RECORD_SIZE
 #define MAX_RECORD_SIZE (8 * 1024)
 #endif

@@ -27,7 +27,7 @@ int __attribute__((noinline, optimize(0))) i2cwolf_receive(WOLFSSL* ssl, char* b
         // Sometimes these are not set properly
         I2C_REGS[RECEIVE_DONE][0] = false;
         I2C_REGS[TRANSMIT_DONE][0] = false;
-        int len = wait_and_receive_packet(tb->buf);
+        int len = wait_and_receive_packet((uint8_t *)tb->buf);
 
         if (len < 0)
             return ERROR_RETURN;
@@ -41,7 +41,7 @@ int __attribute__((noinline, optimize(0))) i2cwolf_receive(WOLFSSL* ssl, char* b
         // Sometimes these are not set properly
         I2C_REGS[RECEIVE_DONE][0] = false;
         I2C_REGS[TRANSMIT_DONE][0] = false;
-        int len = wait_and_receive_packet(tb->buf + tb->data_len);
+        int len = wait_and_receive_packet((uint8_t *)(tb->buf + tb->data_len));
 
         if (len < 0)
             return ERROR_RETURN;
@@ -91,7 +91,7 @@ int __attribute__((noinline, optimize(0))) i2cwolf_send(WOLFSSL* ssl, char* buf,
         // Sometimes these are not set properly
         I2C_REGS[RECEIVE_DONE][0] = true;
         I2C_REGS[TRANSMIT_DONE][0] = false;
-        send_packet_and_ack(MAX_I2C_MESSAGE_LEN-1, buf + i);
+        send_packet_and_ack(MAX_I2C_MESSAGE_LEN-1, (uint8_t *)(buf + i));
         I2C_REGS[TRANSMIT_DONE][0] = true;
         len -= MAX_I2C_MESSAGE_LEN-1;
         i += MAX_I2C_MESSAGE_LEN-1;
@@ -104,7 +104,7 @@ int __attribute__((noinline, optimize(0))) i2cwolf_send(WOLFSSL* ssl, char* buf,
     // Sometimes these are not set properly
     I2C_REGS[RECEIVE_DONE][0] = true;
     I2C_REGS[TRANSMIT_DONE][0] = false;
-    send_packet_and_ack(len, buf + i);
+    send_packet_and_ack(len, (uint8_t *)(buf + i));
     I2C_REGS[TRANSMIT_DONE][0] = true;
     
     return ret;
@@ -134,18 +134,15 @@ WOLFSSL_CTX* __attribute__((noinline, optimize(0))) ssl_new_context_server() {
     WOLFSSL_CTX* ctx;
     ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method());
     if(ctx == NULL) {
-        #ifdef DEBUG
-        printf("Failed to create WolfSSL CTX");
-        #endif
-        return -1;
+        return NULL;
     }
 
     // Set callbacks
     wolfSSL_CTX_SetIOSend(ctx, i2cwolf_send);
     wolfSSL_CTX_SetIORecv(ctx, i2cwolf_receive); 
 
-    wolfSSL_CTX_use_PrivateKey_buffer(ctx, KEY_DEVICE, sizeof(KEY_DEVICE), SSL_FILETYPE_PEM);
-    wolfSSL_CTX_use_certificate_buffer(ctx, PEM_DEVICE, sizeof(PEM_DEVICE), SSL_FILETYPE_PEM);
+    wolfSSL_CTX_use_PrivateKey_buffer(ctx, (const unsigned char*)KEY_DEVICE, sizeof(KEY_DEVICE), SSL_FILETYPE_PEM);
+    wolfSSL_CTX_use_certificate_buffer(ctx, (const unsigned char*)PEM_DEVICE, sizeof(PEM_DEVICE), SSL_FILETYPE_PEM);
 
     // Restrict cipher
     int cipherlist = wolfSSL_CTX_set_cipher_list(ctx, "TLS13-AES128-GCM-SHA256");
@@ -153,7 +150,7 @@ WOLFSSL_CTX* __attribute__((noinline, optimize(0))) ssl_new_context_server() {
         return NULL;
     }
 
-    int verify_buffer = wolfSSL_CTX_load_verify_buffer(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM);
+    int verify_buffer = wolfSSL_CTX_load_verify_buffer(ctx, (const unsigned char*)PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM);
     
     if(verify_buffer != WOLFSSL_SUCCESS) {
         return NULL;

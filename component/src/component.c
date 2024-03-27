@@ -95,7 +95,7 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * Securely send data over I2C. This function is utilized in POST_BOOT functionality.
  * This function must be implemented by your team to align with the security requirements.
 */
-void __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t len) {
+int __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t len) {
     int ret = 0;
     int err = 0;
     uint8_t snd_len[1] = {len};

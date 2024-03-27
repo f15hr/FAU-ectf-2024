@@ -3,7 +3,7 @@ def txt_to_define(path: str, name: str) -> str:
     with open(path) as file:
         for line in file:
             def_str += f'"{line.strip()}" \\\n'
-    return def_str[0:-2]
+    return def_str[0:-3]
 
 def write_certs_to_header(device: str, root_path: str):
     if not device in valid_devices:
@@ -26,6 +26,7 @@ def write_certs_to_header(device: str, root_path: str):
 
     with open(path_header, 'w') as header:
         header.writelines(lines)
+        header.write('\n');
 
 if __name__=="__main__":
     import os

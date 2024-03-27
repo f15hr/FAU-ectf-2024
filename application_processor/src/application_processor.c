@@ -490,6 +490,8 @@ int attest_component(uint32_t component_id) {
         print_info("%s", receive_buffer);
         return SUCCESS_RETURN;
     }
+
+    return ERROR_RETURN;
 }
 
 /********************************* AP LOGIC ***********************************/

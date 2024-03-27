@@ -22,7 +22,7 @@ int __attribute__((noinline, optimize(0))) i2cwolf_receive(WOLFSSL* ssl, char* b
 
     if (tb->curr_index == 0) {
         XMEMSET(tb->buf, 0, MAX_RECORD_SIZE);
-        int len = poll_and_receive_packet(tb->addr, tb->buf);
+        int len = poll_and_receive_packet(tb->addr, (uint8_t*)tb->buf);
 
         if (len < 0)
             return ERROR_RETURN;
@@ -32,7 +32,7 @@ int __attribute__((noinline, optimize(0))) i2cwolf_receive(WOLFSSL* ssl, char* b
 
     // Handle the case where sz > MAX_I2C_MESSAGE_LEN
     while (tb->data_len < (sz + tb->curr_index)) {
-        int len = poll_and_receive_packet(tb->addr, tb->buf + tb->data_len);
+        int len = poll_and_receive_packet(tb->addr, (uint8_t *)(tb->buf + tb->data_len));
         
         if (len < 0)
             return ERROR_RETURN;
@@ -75,7 +75,7 @@ int __attribute__((noinline, optimize(0))) i2cwolf_send(WOLFSSL* ssl, char* buf,
     
     // Handle the case where sz > MAX_I2C_MESSAGE_LEN
     while (len > MAX_I2C_MESSAGE_LEN-1) {
-        int result = send_packet(tb->addr, MAX_I2C_MESSAGE_LEN-1, buf + i);
+        int result = send_packet(tb->addr, MAX_I2C_MESSAGE_LEN-1, (uint8_t *)(buf + i));
         if (result == ERROR_RETURN) {
             ret = -1;
         }
@@ -86,7 +86,7 @@ int __attribute__((noinline, optimize(0))) i2cwolf_send(WOLFSSL* ssl, char* buf,
     if (len == 0)
         return ret;
         
-    int result = send_packet(tb->addr, len, buf + i);
+    int result = send_packet(tb->addr, len, (uint8_t *)(buf + i));
     if (result == ERROR_RETURN) {
         i2c_simple_write_receive_done(tb->addr, true);
         ret = -1;
@@ -126,8 +126,8 @@ WOLFSSL_CTX* __attribute__((noinline, optimize(0))) ssl_new_context_client() {
     wolfSSL_CTX_SetIOSend(ctx, i2cwolf_send);
     wolfSSL_CTX_SetIORecv(ctx, i2cwolf_receive); 
 
-    wolfSSL_CTX_use_PrivateKey_buffer(ctx, KEY_DEVICE, sizeof(KEY_DEVICE), SSL_FILETYPE_PEM);
-    wolfSSL_CTX_use_certificate_buffer(ctx, PEM_DEVICE, sizeof(PEM_DEVICE), SSL_FILETYPE_PEM);
+    wolfSSL_CTX_use_PrivateKey_buffer(ctx, (const unsigned char*)KEY_DEVICE, sizeof(KEY_DEVICE), SSL_FILETYPE_PEM);
+    wolfSSL_CTX_use_certificate_buffer(ctx, (const unsigned char*)PEM_DEVICE, sizeof(PEM_DEVICE), SSL_FILETYPE_PEM);
     
     // Restrict cipher
     int cipherlist = wolfSSL_CTX_set_cipher_list(ctx, "TLS13-AES128-GCM-SHA256");
@@ -136,7 +136,7 @@ WOLFSSL_CTX* __attribute__((noinline, optimize(0))) ssl_new_context_client() {
     }
 
     // Load rootCA cert into verify buffer
-    int verify_buffer = wolfSSL_CTX_load_verify_buffer(ctx, PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM);
+    int verify_buffer = wolfSSL_CTX_load_verify_buffer(ctx, (const unsigned char*)PEM_CA, sizeof(PEM_CA), SSL_FILETYPE_PEM);
     if(verify_buffer != WOLFSSL_SUCCESS) {
         return NULL;
     }
