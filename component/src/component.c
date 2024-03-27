@@ -311,9 +311,12 @@ void process_attest() {
     // send_packet_and_ack(len, transmit_buffer);
 }
 
-// receive and command from ap and send acknowledgement
+/**
+ * @brief Receives a wake command from the AP
+ * 
+ * @return int: Number of bytes received from the AP
+*/
 int wake_comp() {
-    // Send message
     uint8_t data[1] = {0};
     
     int len = wait_and_receive_packet(data);
