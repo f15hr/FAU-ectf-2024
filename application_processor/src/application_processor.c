@@ -374,11 +374,9 @@ int scan_components() {
         // I2C Blacklist:
         // 0x18, 0x28, and 0x36 conflict with separate devices on MAX78000FTHR
         if (addr == 0x18 || addr == 0x28 || addr == 0x36) {
-                continue;
+            continue;
         }
         
-        // i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[i]);
-
         // check if device is present
         int len = issue_wake(addr);
 
@@ -494,6 +492,7 @@ int attest_component(uint32_t component_id) {
         return SUCCESS_RETURN;
     }
 
+    print_error("Could not attest component\n");
     return ERROR_RETURN;
 }
 
