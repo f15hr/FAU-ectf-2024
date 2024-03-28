@@ -1,4 +1,5 @@
 #include "trng.h"
+#include "inc/rng.h"
 
 unsigned int get_random_trng(void) {
     uint8_t var_rnd_no[4] = {0};
