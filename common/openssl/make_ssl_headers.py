@@ -26,7 +26,7 @@ def write_certs_to_header(device: str, root_path: str):
 
     with open(path_header, 'w') as header:
         header.writelines(lines)
-        header.write('\n');
+        header.write('\n')
 
 if __name__=="__main__":
     import os
