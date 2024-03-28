@@ -60,6 +60,7 @@ SRC_LD = -T./linker.ld
 
 # Optimization level and place functions / data into separate sections to allow dead code removal
 CFLAGS += -Os -ffunction-sections -fdata-sections -fno-builtin
+CFLAGS += -D_FORTIFY_SOURCE=2
 # Remove unused sections and link time optimizations
 LDFLAGS += -Wl,--gc-sections -flto
 
