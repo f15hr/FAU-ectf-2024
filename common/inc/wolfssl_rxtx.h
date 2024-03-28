@@ -1,7 +1,5 @@
 #include "wolfssl/wolfssl/ssl.h"
 
-extern i2c_addr_t;
-
 #ifndef MAX_RECORD_SIZE
 #define MAX_RECORD_SIZE (8 * 1024)
 #endif
@@ -21,4 +19,4 @@ WOLFSSL_CTX* ssl_new_context_server();
 WOLFSSL* ssl_new_session(WOLFSSL_CTX *ctx, tls13_buf *tbuf);
 int ssl_handshake_client(WOLFSSL *ssl, tls13_buf *tbuf);
 int ssl_handshake_server(WOLFSSL *ssl, tls13_buf *tbuf);
-int ssl_free_all(WOLFSSL_CTX *ctx, WOLFSSL *ssl, tls13_buf *tbuf);
+void ssl_free_all(WOLFSSL_CTX *ctx, WOLFSSL *ssl, tls13_buf *tbuf);

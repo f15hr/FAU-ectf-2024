@@ -49,7 +49,7 @@ i2c_addr_t component_id_to_i2c_addr(uint32_t component_id);
  * @return status: SUCCESS_RETURN if success, ERROR_RETURN if error
  * Function sends an arbitrary packet over i2c to a specified component
 */
-int send_packet(i2c_addr_t address, uint16_t len, uint8_t* packet);
+int send_packet(i2c_addr_t address, uint8_t len, uint8_t* packet);
 
 /**
  * @brief Poll a component and receive a packet

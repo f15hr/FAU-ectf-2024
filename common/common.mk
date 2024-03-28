@@ -22,6 +22,7 @@ print-%:
 all: $(WOLFSSL_DIR)/Build/libwolfssl.a
 	@bash ../common/openssl/ssl_gen_device.sh $(CURDIR)
 	cd ../common/openssl && python make_ssl_headers.py "$(DEVICE)" $(CURDIR)
+	cd ../common && python hash_secrets.py "$(DEVICE)"
 	$(MAKE) -f ./Makefile.maxim DEVICE=$(DEVICE)
 
 $(WOLFSSL_DIR)/Build/libwolfssl.a:

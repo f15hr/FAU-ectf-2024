@@ -14,6 +14,8 @@
 #include "board.h"
 #include "i2c.h"
 #include "led.h"
+#include "i2s.h"
+#include "cameraif.h"
 #include "mxc_delay.h"
 #include "mxc_errors.h"
 #include "nvic_table.h"
@@ -44,34 +46,6 @@
 
 #define print_info(...) printf("%%info: "); printf(__VA_ARGS__); printf("%%"); fflush(stdout)
 #define print_hex_info(...) printf("%%info: "); print_hex(__VA_ARGS__); printf("%%"); fflush(stdout)
-
-// #define  ARM_CM_DEMCR      (*(uint32_t *)0xE000EDFC)
-// #define  ARM_CM_DWT_CTRL   (*(uint32_t *)0xE0001000)
-// #define  ARM_CM_DWT_CYCCNT (*(uint32_t *)0xE0001004)
-
-
-// if (ARM_CM_DWT_CTRL != 0) {        // See if DWT is available
-
-//             ARM_CM_DEMCR      |= 1 << 24;  // Set bit 24
-//             ARM_CM_DWT_CYCCNT  = 0;
-//             ARM_CM_DWT_CTRL   |= 1 << 0;   // Set bit 0
-
-//         }
-
-// volatile uint32_t start_cc = ARM_CM_DWT_CYCCNT;
-// volatile uint32_t end_cc = ARM_CM_DWT_CYCCNT;
-
-/********************************* CONSTANTS **********************************/
-
-// Passed in through ectf-params.h
-// Example of format of ectf-params.h shown here
-/*
-#define COMPONENT_ID 0x11111124
-#define COMPONENT_BOOT_MSG "Component boot"
-#define ATTESTATION_LOC "McLean"
-#define ATTESTATION_DATE "08/08/08"
-#define ATTESTATION_CUSTOMER "Fritz"
-*/
 
 /******************************** TYPE DEFINITIONS ********************************/
 // Commands received by Component using 32 bit integer
@@ -121,44 +95,65 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * Securely send data over I2C. This function is utilized in POST_BOOT functionality.
  * This function must be implemented by your team to align with the security requirements.
 */
-void __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t len) {
+int __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t len) {
+    if (get_random_trng() == ERROR_RETURN){
+        return ERROR_RETURN;
+    }
     int ret = 0;
     int err = 0;
     uint8_t snd_len[1] = {len};
 
-    tls13_buf *tbuf = ssl_new_buf(0);
-    WOLFSSL_CTX *ctx = ssl_new_context_server();
-    WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
-    ret = ssl_handshake_server(ssl, tbuf);
+    // Ensure I2C register flags have expected value.
+    // Sometimes these are not set properly
+    I2C_REGS[TRANSMIT_LEN][0] = 0;
+    I2C_REGS[RECEIVE_LEN][0] = 0;
 
-    if (ret <= 0) {
-        ssl_free_all(ctx, ssl, tbuf);
-        return ERROR_RETURN;
-    }
+    // Init wolfSSL library
+    // Technically we should do this once, but
+    // we want to ensure every invocation of wolfSSL
+    // is a fresh state
+    wolfSSL_Init();
 
+    tls13_buf *tbuf; 
+    WOLFSSL_CTX *ctx; 
+    WOLFSSL *ssl; 
+    do {
+        tbuf = ssl_new_buf(0);
+        ctx = ssl_new_context_server();
+        ssl = ssl_new_session(ctx, tbuf);
+        ret = ssl_handshake_server(ssl, tbuf);
+    } while (ret == -1);
+
+    // Send length of data to transmit via wolfSSL
     do {
         ret = wolfSSL_write(ssl, snd_len, 1);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
+        
         return ERROR_RETURN;
     }
 
+    // Send data via wolfSSL
     do {
         ret = wolfSSL_write(ssl, buffer, len);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
-
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
+        
         return ERROR_RETURN;
     }
 
+    // Free all memory
     ssl_free_all(ctx, ssl, tbuf);
-
+    wolfSSL_Cleanup();
+    
     return ret;
 }
 
@@ -173,25 +168,37 @@ void __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t
  * This function must be implemented by your team to align with the security requirements.
 */
 int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
+    if (get_random_trng() == ERROR_RETURN){
+        return ERROR_RETURN;
+    }
     int ret = 0;
     int err = 0;
     uint8_t rcv_len[1] = {0};
 
-    tls13_buf *tbuf = ssl_new_buf(0);
-    WOLFSSL_CTX *ctx = ssl_new_context_server();
-    WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
-    ret = ssl_handshake_server(ssl, tbuf);
+    // Ensure I2C register flags have expected value.
+    // Sometimes these are not set properly
+    I2C_REGS[TRANSMIT_LEN][0] = 0;
+    I2C_REGS[RECEIVE_LEN][0] = 0;
 
-    if (ret <= 0) {
-        ssl_free_all(ctx, ssl, tbuf);
-        return ERROR_RETURN;
-    }
+    wolfSSL_Init();
 
+    tls13_buf *tbuf; 
+    WOLFSSL_CTX *ctx; 
+    WOLFSSL *ssl; 
+    do {
+        tbuf = ssl_new_buf(0);
+        ctx = ssl_new_context_server();
+        ssl = ssl_new_session(ctx, tbuf);
+        ret = ssl_handshake_server(ssl, tbuf);
+    } while (ret == -1);
+
+    // Get length of data being transmitted via wolfSSL
     do {
         ret = wolfSSL_read(ssl, rcv_len, 1);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
@@ -199,19 +206,23 @@ int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
 
     uint8_t t_len = rcv_len[0];
 
+    // Receive data via wolfSSL
     do {
         ret = wolfSSL_read(ssl, buffer, t_len);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
+        
         return ERROR_RETURN;
     }
 
-
+    // Free all memory
     ssl_free_all(ctx, ssl, tbuf);
-
+    wolfSSL_Cleanup();
+    
     return ret;
 }
 
@@ -220,6 +231,7 @@ int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
 // Example boot sequence
 // Your design does not need to change this
 void boot() {
+    
 
     // POST BOOT FUNCTIONALITY
     // DO NOT REMOVE IN YOUR DESIGN
@@ -247,10 +259,12 @@ void boot() {
         MXC_Delay(500000);
     }
     #endif
+    
 }
 
 // Handle a transaction from the AP
 void component_process_cmd() {
+    
     command_message* command = (command_message*) receive_buffer;
 
     // Output to application processor dependent on command received
@@ -271,41 +285,71 @@ void component_process_cmd() {
         printf("Error: Unrecognized command received %d\n", command->opcode);
         break;
     }
+    
 }
 
 void process_boot() {
+    
     // The AP requested a boot. Set `component_boot` for the main loop and
     // respond with the boot message
+    process_validate();
     uint8_t len = strlen(COMPONENT_BOOT_MSG) + 1;
     memcpy((void*)transmit_buffer, COMPONENT_BOOT_MSG, len);
     secure_send(transmit_buffer, len);
-    // send_packet_and_ack(len, transmit_buffer);
     // Call the boot function
     boot();
+    
 }
 
 void process_scan() {
+    
     // The AP requested a scan. Respond with the Component ID
     scan_message* packet = (scan_message*) transmit_buffer;
     packet->component_id = COMPONENT_ID;
     secure_send(transmit_buffer, sizeof(scan_message));
-    // send_packet_and_ack(sizeof(scan_message), transmit_buffer);
+    
 }
 
 void process_validate() {
+    
     // The AP requested a validation. Respond with the Component ID
     validate_message* packet = (validate_message*) transmit_buffer;
     packet->component_id = COMPONENT_ID;
     secure_send(transmit_buffer, sizeof(validate_message));
-    // send_packet_and_ack(sizeof(validate_message), transmit_buffer);
+    
 }
 
 void process_attest() {
+    
     // The AP requested attestation. Respond with the attestation data
+
+    /****************************************************************************
+     * TODO: CHECK SPRINTF MIGHT BE SUS.
+    ****************************************************************************/
     uint8_t len = sprintf((char*)transmit_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
     secure_send(transmit_buffer, len);
-    // send_packet_and_ack(len, transmit_buffer);
+    
+}
+
+/**
+ * @brief Receives a wake command from the AP
+ * 
+ * @return int: Number of bytes received from the AP
+*/
+int wake_comp() {
+    
+    uint8_t data[1] = {0};
+    
+    int len = wait_and_receive_packet(data);
+    if (len == ERROR_RETURN) {
+        
+        return ERROR_RETURN;
+    }
+
+    send_packet_and_ack(len, data);
+    
+    return len;
 }
 
 /*********************************** MAIN *************************************/
@@ -316,29 +360,31 @@ int main(void) {
     // Enable Global Interrupts
     __enable_irq();
 
-    // LETS GO PLAID
+    // Increase clock speed to 100 MHz (Hopefully :))
     MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
     
     // Initialize Component
     i2c_addr_t addr = component_id_to_i2c_addr(COMPONENT_ID);
     board_link_init(addr);
 
+    // Initialize the TRNG hardware
     MXC_TRNG_Init();
 
-    // Initialize WOLFSSL
-    int wfInitSuccess = wolfSSL_Init();
-    
-    LED_On(LED2);
+    // Disable the audio jacks
+    MXC_I2S_TXDisable();
+    MXC_I2S_RXDisable();
 
-    unsigned char echoBuffer[MAX_I2C_MESSAGE_LEN] = {0};
+    // Disable camera
+    MXC_PCIF_Stop();
 
-    // secure_receive(echoBuffer);
-    // secure_send(echoBuffer, 255);
-    
+    LED_On(LED2); 
 
     while (1) {
-        secure_receive(receive_buffer);
 
+        I2C_REGS[TRANSMIT_DONE][0] = false;
+
+        wake_comp();
+        secure_receive(receive_buffer);
         component_process_cmd();
     }
 }

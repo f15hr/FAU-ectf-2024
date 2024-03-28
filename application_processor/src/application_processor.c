@@ -15,6 +15,8 @@
 #include "i2c.h"
 #include "icc.h"
 #include "led.h"
+#include "i2s.h"
+#include "cameraif.h"
 #include "mxc_delay.h"
 #include "mxc_device.h"
 #include "nvic_table.h"
@@ -28,9 +30,6 @@
 #include "board_link.h"
 #include "simple_flash.h"
 #include "host_messaging.h"
-#ifdef CRYPTO_EXAMPLE
-#include "simple_crypto.h"
-#endif
 
 #include "wolfssl/wolfssl/ssl.h"
 #include "wolfssl_rxtx.h"
@@ -47,16 +46,6 @@
 
 /********************************* CONSTANTS **********************************/
 
-// Passed in through ectf-params.h
-// Example of format of ectf-params.h shown here
-/*
-#define AP_PIN "123456"
-#define AP_TOKEN "0123456789abcdef"
-#define COMPONENT_IDS 0x11111124, 0x11111125
-#define COMPONENT_CNT 2
-#define AP_BOOT_MSG "Test boot message"
-*/
-
 // Flash Macros
 #define FLASH_ADDR ((MXC_FLASH_MEM_BASE + MXC_FLASH_MEM_SIZE) - (2 * MXC_FLASH_PAGE_SIZE))
 #define FLASH_MAGIC 0xDEADBEEF
@@ -65,20 +54,12 @@
 #define SUCCESS_RETURN 0
 #define ERROR_RETURN -1
 
-// #define  ARM_CM_DEMCR      (*(uint32_t *)0xE000EDFC)
-// #define  ARM_CM_DWT_CTRL   (*(uint32_t *)0xE0001000)
-// #define  ARM_CM_DWT_CYCCNT (*(uint32_t *)0xE0001004)
-// if (ARM_CM_DWT_CTRL != 0) {        // See if DWT is available
-//           ARM_CM_DEMCR      |= 1 << 24;  // Set bit 24
-//           ARM_CM_DWT_CYCCNT  = 0;
-//           ARM_CM_DWT_CTRL   |= 1 << 0;   // Set bit 0
-//       }
-// volatile uint32_t start_cc = ARM_CM_DWT_CYCCNT;
-// MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
-// volatile int start_cc = *STCVR;
-// volatile int end_cc = *STCVR;
-// printf("%d", start_cc = end_cc);
-
+// Buffer sizes
+#define BUFFER_CMD_SIZE 20
+#define BUFFER_HASH_SIZE 64
+#define BUFFER_PIN_SIZE 6
+#define BUFFER_TOKEN_SIZE 16
+#define BUFFER_CMPID_SIZE 10
 /******************************** TYPE DEFINITIONS ********************************/
 // Data structure for sending commands to component
 // Params allows for up to MAX_I2C_MESSAGE_LEN - 1 bytes to be send
@@ -133,42 +114,70 @@ flash_entry flash_status;
 */
 
 int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
+    if (get_random_trng() == ERROR_RETURN){
+        return ERROR_RETURN;
+    }
     int ret = 0;
     int err = 0;
     uint8_t snd_len[1] = {len};
 
-    tls13_buf *tbuf = ssl_new_buf(address);
-    WOLFSSL_CTX *ctx = ssl_new_context_client();
-    WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
-    ret = ssl_handshake_client(ssl, tbuf);
+    // Ensure I2C register flags have expected value.
+    // Sometimes these are not set properly
+    i2c_simple_write_receive_len(address, 0);
+    i2c_simple_write_transmit_len(address, 0);
 
-    if (ret <= 0) {
-        ssl_free_all(ctx, ssl, tbuf);
-        return ERROR_RETURN;
-    }
+    // Init wolfSSL library
+    // Technically we should do this once, but
+    // we want to ensure every invocation of wolfSSL
+    // is a fresh state
+    wolfSSL_Init();
 
+    tls13_buf *tbuf; 
+    WOLFSSL_CTX *ctx; 
+    WOLFSSL *ssl; 
     do {
+        tbuf = ssl_new_buf(address);
+        ctx = ssl_new_context_client();
+        ssl = ssl_new_session(ctx, tbuf);
+        // Need to delay the AP to ensure the component is 
+        // in its loop before proceeding
+        MXC_Delay(5000);
+        ret = ssl_handshake_client(ssl, tbuf);
+    } while (ret == -1);
+
+    // Send length of data to transmit via wolfSSL
+    do {
+        // Need to delay the AP to ensure the component is 
+        // in its loop before proceeding
+        MXC_Delay(5000);
         ret = wolfSSL_write(ssl, snd_len, 1);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
     }
 
+    // Send data via wolfSSL
     do {
+        // Need to delay the AP to ensure the component is 
+        // in its loop before proceeding
+        MXC_Delay(5000);
         ret = wolfSSL_write(ssl, buffer, len);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
-
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
     }
 
+    // Free all memory
     ssl_free_all(ctx, ssl, tbuf);
+    wolfSSL_Cleanup();
 
     return ret;
 }
@@ -185,26 +194,47 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
  * This function must be implemented by your team to align with the security requirements.
 */
 int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, uint8_t* buffer) {
-    uint8_t buf[MAX_I2C_MESSAGE_LEN] = {0};
+    if (get_random_trng() == ERROR_RETURN){
+        return ERROR_RETURN;
+    }
     int ret = 0;
     int err = 0;
     uint8_t rcv_len[1] = {0};
 
-    tls13_buf *tbuf = ssl_new_buf(address);
-    WOLFSSL_CTX *ctx = ssl_new_context_client();
-    WOLFSSL *ssl = ssl_new_session(ctx, tbuf);
-    ret = ssl_handshake_client(ssl, tbuf);
+    // Ensure I2C register flags have expected value.
+    // Sometimes these are not set properly
+    i2c_simple_write_receive_len(address, 0);
+    i2c_simple_write_transmit_len(address, 0);
 
-    if (ret <= 0) {
-        ssl_free_all(ctx, ssl, tbuf);
-        return ERROR_RETURN;
-    }
+    // Init wolfSSL library
+    // Technically we should do this once, but
+    // we want to ensure every invocation of wolfSSL
+    // is a fresh state
+    wolfSSL_Init();
 
+    tls13_buf *tbuf; 
+    WOLFSSL_CTX *ctx; 
+    WOLFSSL *ssl; 
     do {
+        tbuf = ssl_new_buf(address);
+        ctx = ssl_new_context_client();
+        ssl = ssl_new_session(ctx, tbuf);
+        // Need to delay the AP to ensure the component is 
+        // in its loop before proceeding
+        MXC_Delay(5000);
+        ret = ssl_handshake_client(ssl, tbuf);
+    } while (ret == -1);
+
+    // Get length of data being transmitted via wolfSSL
+    do {
+        // Need to delay the AP to ensure the component is 
+        // in its loop before proceeding
+        MXC_Delay(5000);
         ret = wolfSSL_read(ssl, rcv_len, 1);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
@@ -212,17 +242,24 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
 
     uint8_t t_len = rcv_len[0];
 
+    // Receive data via wolfSSL
     do {
+        // Need to delay the AP to ensure the component is 
+        // in its loop before proceeding
+        MXC_Delay(5000);
         ret = wolfSSL_read(ssl, buffer, t_len);
         err = wolfSSL_get_error(ssl, ret);
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE);
 
+    // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
         return ERROR_RETURN;
     }
 
+    // Free all memory
     ssl_free_all(ctx, ssl, tbuf);
+    wolfSSL_Cleanup();
 
     return ret;
 }
@@ -274,28 +311,52 @@ void init() {
     // Initialize board link interface
     board_link_init();
 
-    // Init TRNG
+    // Initialize the TRNG hardware
     MXC_TRNG_Init();
 
-    // Initialize WOLFSSL
-    int wfInitSuccess = wolfSSL_Init();
+    // Disable the audio jacks
+    MXC_I2S_TXDisable();
+    MXC_I2S_RXDisable();
 
-
+    // Disable camera
+    MXC_PCIF_Stop();
 }
 
 // Send a command to a component and receive the result
 int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
     // Send message
-    
-    // int result = send_packet(addr, sizeof(uint8_t), transmit);
     int result = secure_send(addr, transmit, sizeof(uint8_t));
     if (result == ERROR_RETURN) {
         return ERROR_RETURN;
     }
     
     // Receive message
-    // int len = poll_and_receive_packet(addr, receive);
     int len = secure_receive(addr, receive);
+    if (len == ERROR_RETURN) {
+        return ERROR_RETURN;
+    }
+    return len;
+}
+
+/**
+ * @brief Issues a wake command to the component
+ * 
+ * @param i2c_addr_t addr: The address of the component to wake up
+ * 
+ * @return int: Number of bytes received from the component
+*/
+int issue_wake(i2c_addr_t addr) {
+    // Send message
+    uint8_t transmit[1] = {0x11};
+    uint8_t receive[1] = {0};
+
+    int result = send_packet(addr, sizeof(uint8_t), transmit);
+    if (result == ERROR_RETURN) {
+        return ERROR_RETURN;
+    }
+    
+    // Receive message
+    int len = poll_and_receive_packet(addr, receive);
     if (len == ERROR_RETURN) {
         return ERROR_RETURN;
     }
@@ -311,8 +372,8 @@ int scan_components() {
     }
 
     // Buffers for board link communication
-    uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
-    uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
+    uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN] = {0};
+    uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN] = {0};
 
     // Scan scan command to each component 
     for (i2c_addr_t addr = 0x8; addr < 0x78; addr++) {
@@ -321,18 +382,25 @@ int scan_components() {
         if (addr == 0x18 || addr == 0x28 || addr == 0x36) {
             continue;
         }
-
-        // Create command message 
-        command_message* command = (command_message*) transmit_buffer;
-        command->opcode = COMPONENT_CMD_SCAN;
         
-        // Send out command and receive result
-        int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+        // check if device is present
+        int len = issue_wake(addr);
 
         // Success, device is present
         if (len > 0) {
-            scan_message* scan = (scan_message*) receive_buffer;
-            print_info("F>0x%08x\n", scan->component_id);
+
+            // Create command message 
+            command_message* command = (command_message*) transmit_buffer;
+            command->opcode = COMPONENT_CMD_SCAN;
+
+            // Send out command and receive result
+            int res = issue_cmd(addr, transmit_buffer, receive_buffer);
+
+            // Success, device is present
+            if (res > 0) {
+                scan_message* scan = (scan_message*) receive_buffer;
+                print_info("F>0x%08x\n", scan->component_id);
+            }
         }
     }
     print_success("List\n");
@@ -351,21 +419,28 @@ int validate_components() {
 
         // Create command message
         command_message* command = (command_message*) transmit_buffer;
-        command->opcode = COMPONENT_CMD_VALIDATE;
-        
-        // Send out command and receive result
-        int len = issue_cmd(addr, transmit_buffer, receive_buffer);
-        if (len == ERROR_RETURN) {
-            print_error("Could not validate component\n");
-            return ERROR_RETURN;
-        }
+        // command->opcode = COMPONENT_CMD_VALIDATE;
+        command->opcode = COMPONENT_CMD_BOOT;
 
-        validate_message* validate = (validate_message*) receive_buffer;
-        // Check that the result is correct
-        if (validate->component_id != flash_status.component_ids[i]) {
-            print_error("Component ID: 0x%08x invalid\n", flash_status.component_ids[i]);
-            return ERROR_RETURN;
-        }
+
+        int len = issue_wake(addr);
+
+        if (len > 0) {    
+        
+            // Send out command and receive result
+            int res = issue_cmd(addr, transmit_buffer, receive_buffer);
+            if (res == ERROR_RETURN) {
+                print_error("Could not validate component\n");
+                return ERROR_RETURN;
+            }
+
+            validate_message* validate = (validate_message*) receive_buffer;
+            // Check that the result is correct
+            if (validate->component_id != flash_status.component_ids[i]) {
+                print_error("Component ID: 0x%08x invalid\n", flash_status.component_ids[i]);
+                return ERROR_RETURN;
+            }
+        } else return ERROR_RETURN;
     }
     return SUCCESS_RETURN;
 }
@@ -373,7 +448,6 @@ int validate_components() {
 int boot_components() {
     // Buffers for board link communication
     uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
-    uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
     // Send boot command to each component
     for (unsigned i = 0; i < flash_status.component_cnt; i++) {
@@ -381,11 +455,10 @@ int boot_components() {
         i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[i]);
         
         // Create command message
-        command_message* command = (command_message*) transmit_buffer;
-        command->opcode = COMPONENT_CMD_BOOT;
         
         // Send out command and receive result
-        int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+        // int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+        int len = secure_receive(addr, receive_buffer);
         if (len == ERROR_RETURN) {
             print_error("Could not boot component\n");
             return ERROR_RETURN;
@@ -409,17 +482,24 @@ int attest_component(uint32_t component_id) {
     command_message* command = (command_message*) transmit_buffer;
     command->opcode = COMPONENT_CMD_ATTEST;
 
-    // Send out command and receive result
-    int len = issue_cmd(addr, transmit_buffer, receive_buffer);
-    if (len == ERROR_RETURN) {
-        print_error("Could not attest component\n");
-        return ERROR_RETURN;
+    int len = issue_wake(addr);
+
+    if (len > 0) {
+        // Send out command and receive result
+        int res = issue_cmd(addr, transmit_buffer, receive_buffer);
+        if (res == ERROR_RETURN) {
+            print_error("Could not attest component\n");
+            return ERROR_RETURN;
+        }
+
+        // Print out attestation data 
+        print_info("C>0x%08x\n", component_id);
+        print_info("%s", receive_buffer);
+        return SUCCESS_RETURN;
     }
 
-    // Print out attestation data 
-    print_info("C>0x%08x\n", component_id);
-    print_info("%s", receive_buffer);
-    return SUCCESS_RETURN;
+    print_error("Could not attest component\n");
+    return ERROR_RETURN;
 }
 
 /********************************* AP LOGIC ***********************************/
@@ -428,35 +508,6 @@ int attest_component(uint32_t component_id) {
 // YOUR DESIGN MUST NOT CHANGE THIS FUNCTION
 // Boot message is customized through the AP_BOOT_MSG macro
 void boot() {
-    // Example of how to utilize included simple_crypto.h
-    #ifdef CRYPTO_EXAMPLE
-    // This string is 16 bytes long including null terminator
-    // This is the block size of included symmetric encryption
-    char* data = "Crypto Example!";
-    uint8_t ciphertext[BLOCK_SIZE];
-    uint8_t key[KEY_SIZE];
-    
-    // Zero out the key
-    bzero(key, BLOCK_SIZE);
-
-    // Encrypt example data and print out
-    encrypt_sym((uint8_t*)data, BLOCK_SIZE, key, ciphertext); 
-    print_debug("Encrypted data: ");
-    print_hex_debug(ciphertext, BLOCK_SIZE);
-
-    // Hash example encryption results 
-    uint8_t hash_out[HASH_SIZE];
-    hash(ciphertext, BLOCK_SIZE, hash_out);
-
-    // Output hash result
-    print_debug("Hash result: ");
-    print_hex_debug(hash_out, HASH_SIZE);
-    
-    // Decrypt the encrypted message and print out
-    uint8_t decrypted[BLOCK_SIZE];
-    decrypt_sym(ciphertext, BLOCK_SIZE, key, decrypted);
-    print_debug("Decrypted message: %s\r\n", decrypted);
-    #endif
 
     // POST BOOT FUNCTIONALITY
     // DO NOT REMOVE IN YOUR DESIGN
@@ -483,26 +534,67 @@ void boot() {
 }
 
 // Compare the entered PIN to the correct PIN
-int validate_pin() {
-    char buf[50];
-    recv_input("Enter pin: ", buf);
-    if (!strcmp(buf, AP_PIN)) {
+int validate_pin(char *buf) {
+    char hash[BUFFER_HASH_SIZE] = {0};
+
+    int res = recv_input("Enter pin: ", buf, BUFFER_PIN_SIZE);
+    if (res != SUCCESS_RETURN)
+        return ERROR_RETURN;
+
+    if (sha512(buf, BUFFER_PIN_SIZE, hash)){
+        print_error("Invalid PIN!\n");
+        XMEMSET(buf, 0, BUFFER_PIN_SIZE);
+        return ERROR_RETURN;
+    }
+
+    const char pin_string[] = AP_PIN; 
+    const char *pos = pin_string;
+    unsigned char ap_pin[BUFFER_HASH_SIZE];
+    
+    for (size_t count = 0; count < BUFFER_HASH_SIZE; count++) {
+        sscanf(pos, "%2hhx", &ap_pin[count]);
+        pos += 2;
+    }
+
+    if (!XSTRNCMP(hash, ap_pin, BUFFER_HASH_SIZE)) {
         print_debug("Pin Accepted!\n");
+        XMEMSET(buf, 0, BUFFER_PIN_SIZE);
         return SUCCESS_RETURN;
     }
     print_error("Invalid PIN!\n");
+    XMEMSET(buf, 0, BUFFER_PIN_SIZE);
     return ERROR_RETURN;
 }
 
 // Function to validate the replacement token
-int validate_token() {
-    char buf[50];
-    recv_input("Enter token: ", buf);
-    if (!strcmp(buf, AP_TOKEN)) {
+int validate_token(char *buf) {
+    char hash[BUFFER_HASH_SIZE] = {0};
+    int res = recv_input("Enter token: ", buf, BUFFER_TOKEN_SIZE);
+    if (res != SUCCESS_RETURN)
+        return ERROR_RETURN;
+        
+    if (sha512(buf, BUFFER_TOKEN_SIZE, hash)){
+        print_error("Invalid PIN!\n");
+        XMEMSET(buf, 0, BUFFER_PIN_SIZE);
+        return ERROR_RETURN;
+    }
+
+    const char token_string[] = AP_TOKEN; 
+    const char *pos = token_string;
+    unsigned char ap_token[BUFFER_HASH_SIZE];
+
+    for (size_t count = 0; count < BUFFER_HASH_SIZE; count++) {
+        sscanf(pos, "%2hhx", &ap_token[count]);
+        pos += 2;
+    }
+
+    if (!XSTRNCMP(hash, ap_token, BUFFER_HASH_SIZE)) {
         print_debug("Token Accepted!\n");
+        XMEMSET(buf, 0, BUFFER_TOKEN_SIZE);
         return SUCCESS_RETURN;
     }
     print_error("Invalid Token!\n");
+    XMEMSET(buf, 0, BUFFER_TOKEN_SIZE);
     return ERROR_RETURN;
 }
 
@@ -512,13 +604,12 @@ void attempt_boot() {
         print_error("Components could not be validated\n");
         return;
     }
+    
     print_debug("All Components validated\n");
     if (boot_components()) {
         print_error("Failed to boot all components\n");
         return;
     }
-
-
 
     // Print boot message
     // This always needs to be printed when booting
@@ -529,20 +620,25 @@ void attempt_boot() {
 }
 
 // Replace a component if the PIN is correct
-void attempt_replace() {
-    char buf[50];
+void attempt_replace(char* buf) {
 
-    if (validate_token()) {
+    if (validate_token(buf)) {
         return;
     }
 
     uint32_t component_id_in = 0;
     uint32_t component_id_out = 0;
-
-    recv_input("Component ID In: ", buf);
+    
+    recv_input("Component ID In: ", buf, BUFFER_CMPID_SIZE);
     sscanf(buf, "%x", &component_id_in);
-    recv_input("Component ID Out: ", buf);
+    recv_input("Component ID Out: ", buf, BUFFER_CMPID_SIZE);
     sscanf(buf, "%x", &component_id_out);
+
+    if (component_id_in == component_id_out) {
+        print_error("Component 0x%08x is already provisioned for the system\r\n",
+                component_id_out);
+        return;
+    }
 
     // Find the component to swap out
     for (unsigned i = 0; i < flash_status.component_cnt; i++) {
@@ -566,14 +662,12 @@ void attempt_replace() {
 }
 
 // Attest a component if the PIN is correct
-void attempt_attest() {
-    char buf[50];
-
-    if (validate_pin()) {
+void attempt_attest(char *buf) {
+    if (validate_pin(buf)) {
         return;
     }
     uint32_t component_id;
-    recv_input("Component ID: ", buf);
+    recv_input("Component ID: ", buf, BUFFER_CMPID_SIZE);
     sscanf(buf, "%x", &component_id);
     if (attest_component(component_id) == SUCCESS_RETURN) {
         print_success("Attest\n");
@@ -586,38 +680,8 @@ int main() {
     // Initialize board
     init();
 
-    // LETS GO PLAID
+    // Increase clock speed to 100 MHz (Hopefully :))
     MXC_SYS_Clock_Select(MXC_SYS_CLOCK_IPO);
-
-    // test trng
-    uint8_t var_rnd_no[16] = {0};
-    MXC_TRNG_Random(var_rnd_no, 16);
-
-    volatile unsigned int rng_test = get_random_trng();
-
-    // test wolfSSL
-    // WOLFSSL_CTX* ctx;
-    // WOLFSSL* ssl;
-    // tls13_buf *tbuf;
-    int ret = 0;
-    int err = 0;
-
-    const char testStrCmp1[255] = "2c678ef5d16e9ba734cac406a5e145840a38dea53420cbe79fd5bc3bcaa6e4b9dd03b2b3a08ceff0aec824c251ea7ab27730abb275e51ab12a1c7247034af71c40c2bbb2c12a95946137f6045c1303bfb8dffe4f488e913e8632c9ccd2a3dcc08fc3f4a32d9ad736293744c67fe55eba0ccc8ff576e1333cbfb9ef3deeaf65f";
-    const char testStrCmp2[] = "CMP2: Testing Component\r\n";
-    unsigned char readBuf[MAX_I2C_MESSAGE_LEN] = {0};
-
-    /***********************************************
-     * Test connection with component 1 (0x11111124)
-    ***********************************************/
-    // secure_send(component_id_to_i2c_addr(0x11111124), testStrCmp1, 255);
-    // secure_receive(component_id_to_i2c_addr(0x11111124), readBuf);
-
-    /***********************************************
-     * Test connection with component 2 (0x11111125)
-    ***********************************************/
-    // secure_send(component_id_to_i2c_addr(0x11111125), testStrCmp1, XSTRLEN(testStrCmp1));
-    // secure_receive(component_id_to_i2c_addr(0x11111125), readBuf);
-
     
     #ifdef CRYPTO_EXAMPLE
         print_debug("CRYPTO_EXAMPLE enabled");
@@ -628,22 +692,28 @@ int main() {
     print_info("Application Processor Started\n");
 
     // Handle commands forever
-    char buf[100];
+    char cmd_buf[BUFFER_CMD_SIZE + 1] = {0};
+    char pin_buf[BUFFER_PIN_SIZE + 1] = {0};
+    char token_buf[BUFFER_TOKEN_SIZE + 1] = {0};
+    
     while (1) {
-        recv_input("Enter Command: ", buf);
+        XMEMSET(cmd_buf, 0, BUFFER_CMD_SIZE + 1);
+        XMEMSET(pin_buf, 0, BUFFER_PIN_SIZE + 1);
+        XMEMSET(token_buf, 0, BUFFER_TOKEN_SIZE + 1);
+
+        recv_input("Enter Command: ", cmd_buf, BUFFER_CMD_SIZE);
 
         // Execute requested command
-        if (!strcmp(buf, "list")) {
+        if (!XSTRNCMP(cmd_buf, "list", sizeof cmd_buf)) {
             scan_components();
-
-        } else if (!strcmp(buf, "boot")) {
+        } else if (!XSTRNCMP(cmd_buf, "boot", sizeof cmd_buf)) {
             attempt_boot();
-        } else if (!strcmp(buf, "replace")) {
-            attempt_replace();
-        } else if (!strcmp(buf, "attest")) {
-            attempt_attest();
+        } else if (!XSTRNCMP(cmd_buf, "replace", sizeof cmd_buf)) {
+            attempt_replace(token_buf);
+        } else if (!XSTRNCMP(cmd_buf, "attest", sizeof cmd_buf)) {
+            attempt_attest(pin_buf);
         } else {
-            print_error("Unrecognized command '%s'\n", buf);
+            print_error("Unrecognized command '%s'\n", cmd_buf);
         }
     }
 

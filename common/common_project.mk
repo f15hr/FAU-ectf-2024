@@ -37,8 +37,7 @@ ENTRY=firmware_startup
 # Disable Crypto Example
 CRYPTO_EXAMPLE=0
 
-
-DEBUG = 1
+DEBUG = 0
 
 ############## BEGIN WOLFSSL CONFIGURATION ############## 
 # wolfssl Flags
@@ -48,7 +47,16 @@ DEBUG = 1
 #                -DWOLFSSL_USER_IO -DNO_WRITEV -DTIME_T_NOT_64BIT \
 # 			   -DWOLFSSL_LOAD_FLAG_DATE_ERR_OKAY 
 
-PROJ_CFLAGS += -DWOLFSSL_USER_SETTINGS -DTIME_T_NOT_64BIT -DWOLFSSL_LOAD_FLAG_DATE_ERR_OKAY 
+PROJ_CFLAGS += -DWOLFSSL_USER_SETTINGS -DTIME_T_NOT_64BIT
+
+############## STACK PROTECTION AND SECURITY FLAGS ##############
+# -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Werror=format-security
+#  ^THANKS CMU
+#  https://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html
+# -mstack-protector-guard=global <-- replace global with specifics? 
+#  "Supported locations are 'global' for a global canary or 'sysreg' for a canary in an appropriate system register."
+
+PROJ_CFLAGS += -D_FORTIFY_SOURCE=3 -fstack-protector-all -mstack-protector-guard=global -Wformat -Wformat-security -Werror=format-security
 
 #-DLARGE_STATIC_BUFFERS
 
