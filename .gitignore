@@ -15,6 +15,9 @@ component/**/*.pem
 component/**/*.key
 component/**/*.crt
 component/**/*.csr
+debug/
+documentation/
+
 
 !device/lib
 
