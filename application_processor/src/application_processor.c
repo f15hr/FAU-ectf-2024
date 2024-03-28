@@ -655,24 +655,17 @@ void attempt_replace(char* buf) {
 
     uint32_t component_id_in = 0;
     uint32_t component_id_out = 0;
-    /****************************************************************************
-     * TODO: BUFFER OVERFLOW CHECKS.
-    ****************************************************************************/
     
     recv_input("Component ID In: ", buf, BUFFER_CMPID_SIZE);
     sscanf(buf, "%x", &component_id_in);
     recv_input("Component ID Out: ", buf, BUFFER_CMPID_SIZE);
     sscanf(buf, "%x", &component_id_out);
 
-    /****************************************************************************
-     * TODO: CUSTOM validate that will also check for Component ID in and out.
-     * TODO: Check against if comp in has the same address as comp out.
-     * TODO: Figure something out.
-    ****************************************************************************/
-    // if (validate_components()) {
-    //     print_error("Components could not be validated\n");
-    //     return;
-    // }
+    if (component_id_in == component_id_out) {
+        print_error("Component 0x%08x is already provisioned for the system\r\n",
+                component_id_out);
+        return;
+    }
 
     // Find the component to swap out
     for (unsigned i = 0; i < flash_status.component_cnt; i++) {
@@ -697,11 +690,6 @@ void attempt_replace(char* buf) {
 
 // Attest a component if the PIN is correct
 void attempt_attest(char *buf) {
-    // if (validate_components()) {
-    //     print_error("Components could not be validated\n");
-    //     return;
-    // }
-
     if (validate_pin(buf)) {
         return;
     }
