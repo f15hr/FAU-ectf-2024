@@ -62,6 +62,7 @@
 #define BUFFER_HASH_SIZE 64
 #define BUFFER_PIN_SIZE 6
 #define BUFFER_TOKEN_SIZE 16
+#define BUFFER_CMPID_SIZE 10
 /******************************** TYPE DEFINITIONS ********************************/
 // Data structure for sending commands to component
 // Params allows for up to MAX_I2C_MESSAGE_LEN - 1 bytes to be send
@@ -562,7 +563,10 @@ void boot() {
 // Compare the entered PIN to the correct PIN
 int validate_pin(char *buf) {
     char hash[BUFFER_HASH_SIZE] = {0};
-    recv_input("Enter pin: ", buf);
+
+    int res = recv_input("Enter pin: ", buf, BUFFER_PIN_SIZE);
+    if (res != SUCCESS_RETURN)
+        return ERROR_RETURN;
 
     if (sha512(buf, BUFFER_PIN_SIZE, hash)){
         print_error("Invalid PIN!\n");
@@ -592,8 +596,10 @@ int validate_pin(char *buf) {
 // Function to validate the replacement token
 int validate_token(char *buf) {
     char hash[BUFFER_HASH_SIZE] = {0};
-    recv_input("Enter token: ", buf);
-
+    int res = recv_input("Enter token: ", buf, BUFFER_TOKEN_SIZE);
+    if (res != SUCCESS_RETURN)
+        return ERROR_RETURN;
+        
     if (sha512(buf, BUFFER_TOKEN_SIZE, hash)){
         print_error("Invalid PIN!\n");
         XMEMSET(buf, 0, BUFFER_PIN_SIZE);
@@ -653,9 +659,9 @@ void attempt_replace(char* buf) {
      * TODO: BUFFER OVERFLOW CHECKS.
     ****************************************************************************/
     
-    recv_input("Component ID In: ", buf);
+    recv_input("Component ID In: ", buf, BUFFER_CMPID_SIZE);
     sscanf(buf, "%x", &component_id_in);
-    recv_input("Component ID Out: ", buf);
+    recv_input("Component ID Out: ", buf, BUFFER_CMPID_SIZE);
     sscanf(buf, "%x", &component_id_out);
 
     /****************************************************************************
@@ -700,7 +706,7 @@ void attempt_attest(char *buf) {
         return;
     }
     uint32_t component_id;
-    recv_input("Component ID: ", buf);
+    recv_input("Component ID: ", buf, BUFFER_CMPID_SIZE);
     sscanf(buf, "%x", &component_id);
     if (attest_component(component_id) == SUCCESS_RETURN) {
         print_success("Attest\n");
@@ -725,11 +731,12 @@ int main() {
     print_info("Application Processor Started\n");
 
     // Handle commands forever
-    char cmd_buf[BUFFER_CMD_SIZE] = {0};
-    char pin_buf[BUFFER_PIN_SIZE] = {0};
-    char token_buf[BUFFER_TOKEN_SIZE] = {0};
+    char cmd_buf[BUFFER_CMD_SIZE + 1] = {0};
+    char pin_buf[BUFFER_PIN_SIZE + 1] = {0};
+    char token_buf[BUFFER_TOKEN_SIZE + 1] = {0};
+    
     while (1) {
-        recv_input("Enter Command: ", cmd_buf);
+        recv_input("Enter Command: ", cmd_buf, BUFFER_CMD_SIZE);
 
         // Execute requested command
         if (!XSTRNCMP(cmd_buf, "list", sizeof cmd_buf)) {
