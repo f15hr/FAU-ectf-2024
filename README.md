@@ -13,6 +13,8 @@ This repository holds FAU's design for the MITRE 2024 eCTF competition.
     - `src` - Directory with c source files
     - `openssl` - Scripts and config for creating certificates
     - `wolfssl` - The wolfSSL library, version 5.5.6
+    - `common_project.mk` - Configuration (Make variables, compiler flags, etc.) specific to our project
+    - `common.mk` - Included by the `Makefile` in `application_processor` and `component`. Contains all project-specific recipes.
 - `deployment` - Code for deployment secret generation
     - `Makefile` - This makefile is invoked by the eCTF tools when creating a deployment
     - `certs` - After deployment, contains the root CA's certificate and key
