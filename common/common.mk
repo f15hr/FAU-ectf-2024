@@ -4,8 +4,6 @@ ifeq ($(DEVICE), AP)
 WOLFSSL_DIR = $(abspath ../common/wolfssl/IDE/MAX78000_Client/)
 SSLHEADER_FILE = $(abspath ../application_processor/inc/secrets_ap.h)
 BUILD_DIR = $(abspath ../application_processor/build)
-HASH_SCRTS = $(abspath ../application_processor/hash_secrets.py)
-_ := $(shell python "$(HASH_SCRTS)")
 
 else ifeq ($(DEVICE), COMPONENT)
 WOLFSSL_DIR := $(abspath ../common/wolfssl/IDE/MAX78000_Server/)
@@ -24,6 +22,7 @@ print-%:
 all: $(WOLFSSL_DIR)/Build/libwolfssl.a
 	@bash ../common/openssl/ssl_gen_device.sh $(CURDIR)
 	cd ../common/openssl && python make_ssl_headers.py "$(DEVICE)" $(CURDIR)
+	cd ../common && python hash_secrets.py "$(DEVICE)"
 	$(MAKE) -f ./Makefile.maxim DEVICE=$(DEVICE)
 
 $(WOLFSSL_DIR)/Build/libwolfssl.a:
