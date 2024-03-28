@@ -1,8 +1,8 @@
 import hashlib
 
 def hash_value(value):
-    # Using SHA-256 hash algorithm
-    return hashlib.sha256(value.encode()).hexdigest()
+    # Using SHA-512 hash algorithm
+    return hashlib.sha512(value.encode()).hexdigest()
 
 def main():
     file_path = 'inc/ectf_params.h'

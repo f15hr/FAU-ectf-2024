@@ -59,9 +59,9 @@
 
 // Buffer sizes
 #define BUFFER_CMD_SIZE 20
-#define BUFFER_HASH_SIZE 32
-#define BUFFER_PIN_SIZE 3
-#define BUFFER_TOKEN_SIZE 8
+#define BUFFER_HASH_SIZE 64
+#define BUFFER_PIN_SIZE 6
+#define BUFFER_TOKEN_SIZE 16
 /******************************** TYPE DEFINITIONS ********************************/
 // Data structure for sending commands to component
 // Params allows for up to MAX_I2C_MESSAGE_LEN - 1 bytes to be send
@@ -564,7 +564,9 @@ int validate_pin(char *buf) {
     char hash[BUFFER_HASH_SIZE] = {0};
     recv_input("Enter pin: ", buf);
 
-    if (!wc_Sha256Hash(buf, BUFFER_PIN_SIZE, hash)){
+    if (sha512(buf, BUFFER_PIN_SIZE, hash)){
+        print_error("Invalid PIN!\n");
+        XMEMSET(buf, 0, BUFFER_PIN_SIZE);
         return ERROR_RETURN;
     }
 
@@ -583,7 +585,9 @@ int validate_token(char *buf) {
     char hash[BUFFER_HASH_SIZE] = {0};
     recv_input("Enter token: ", buf);
 
-    if (!wc_Sha256Hash(buf, BUFFER_TOKEN_SIZE, hash)){
+    if (sha512(buf, BUFFER_TOKEN_SIZE, hash)){
+        print_error("Invalid PIN!\n");
+        XMEMSET(buf, 0, BUFFER_PIN_SIZE);
         return ERROR_RETURN;
     }
 
