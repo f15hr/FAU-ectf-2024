@@ -37,8 +37,7 @@ ENTRY=firmware_startup
 # Disable Crypto Example
 CRYPTO_EXAMPLE=0
 
-# TODO: SET DEBUG TO 0
-DEBUG = 1
+DEBUG = 0
 
 ############## BEGIN WOLFSSL CONFIGURATION ############## 
 # wolfssl Flags
