@@ -1,18 +1,23 @@
-# eCTF Insecure Example
-This repository holds the insecure example design for an eCTF MISC system.
+# FAU MITRE 2024 eCTF Design
+This repository holds FAU's design for the MITRE 2024 eCTF competition. 
 
 
 ## Layout
 
 - `application_processor` - Code for the application processor
-    - `project.mk` - This file defines project specific variables included in the Makefile
     - `Makefile` - This makefile is invoked by the eCTF tools when creating a application processor
     - `inc` - Directory with c header files
     - `src` - Directory with c source files
-    - `wolfssl` - Location to place wolfssl library for included Crypto Example
+- `common` - Holds code and scripts needed by both the AP and Components
+    - `inc`- Directory with c header files
+    - `src` - Directory with c source files
+    - `openssl` - Scripts and config for creating certificates
+    - `wolfssl` - The wolfSSL library, version 5.5.6
 - `deployment` - Code for deployment secret generation
     - `Makefile` - This makefile is invoked by the eCTF tools when creating a deployment
-    - You may put other scripts here to invoke from the Makefile
+    - `certs` - After deployment, contains the root CA's certificate and key
+    - `ssl_gen_ca.sh` - Generates a key and certificate for the root CA using OpenSSL
+    - `openssl_ca.conf` - .conf file for OpenSSL
 - `ectf_tools` - Host tools and build tools - DO NOT MODIFY ANYTHING IN THIS DIRECTORY
     - `attestation_tool.py` - Runs attestation command on application processor
     - `boot_tool.py` - Boots the application processor and sensors
@@ -24,7 +29,7 @@ This repository holds the insecure example design for an eCTF MISC system.
     - `Makefile` - This makefile is invoked by the eCTF tools when creating a component
     - `inc` - Directory with c header files
     - `src` - Directory with c source files
-    - `wolfssl` - Location to place wolfssl library for included Crypto Example
+- `ptools.sh` - Run deployment, build, and ectf_* commands with ease
 - `shell.nix` - Nix configuration file for Nix environment
 - `custom_nix_pkgs` - Custom derived nix packages
     - `analog-openocd.nix` - Custom nix package to build Analog Devices fork of OpenOCD
