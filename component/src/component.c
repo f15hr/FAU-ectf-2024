@@ -96,6 +96,9 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * This function must be implemented by your team to align with the security requirements.
 */
 int __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t len) {
+    if (get_random_trng() == ERROR_RETURN){
+        return ERROR_RETURN;
+    }
     int ret = 0;
     int err = 0;
     uint8_t snd_len[1] = {len};
@@ -130,6 +133,7 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t 
     // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
+        
         return ERROR_RETURN;
     }
 
@@ -142,13 +146,14 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t 
     // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
+        
         return ERROR_RETURN;
     }
 
     // Free all memory
     ssl_free_all(ctx, ssl, tbuf);
     wolfSSL_Cleanup();
-
+    
     return ret;
 }
 
@@ -163,6 +168,9 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t 
  * This function must be implemented by your team to align with the security requirements.
 */
 int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
+    if (get_random_trng() == ERROR_RETURN){
+        return ERROR_RETURN;
+    }
     int ret = 0;
     int err = 0;
     uint8_t rcv_len[1] = {0};
@@ -207,13 +215,14 @@ int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
     // Error, free all memory
     if (ret <= 0) {
         ssl_free_all(ctx, ssl, tbuf);
+        
         return ERROR_RETURN;
     }
 
     // Free all memory
     ssl_free_all(ctx, ssl, tbuf);
     wolfSSL_Cleanup();
-
+    
     return ret;
 }
 
@@ -222,6 +231,7 @@ int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
 // Example boot sequence
 // Your design does not need to change this
 void boot() {
+    
 
     // POST BOOT FUNCTIONALITY
     // DO NOT REMOVE IN YOUR DESIGN
@@ -249,10 +259,12 @@ void boot() {
         MXC_Delay(500000);
     }
     #endif
+    
 }
 
 // Handle a transaction from the AP
 void component_process_cmd() {
+    
     command_message* command = (command_message*) receive_buffer;
 
     // Output to application processor dependent on command received
@@ -273,9 +285,11 @@ void component_process_cmd() {
         printf("Error: Unrecognized command received %d\n", command->opcode);
         break;
     }
+    
 }
 
 void process_boot() {
+    
     // The AP requested a boot. Set `component_boot` for the main loop and
     // respond with the boot message
     process_validate();
@@ -284,24 +298,29 @@ void process_boot() {
     secure_send(transmit_buffer, len);
     // Call the boot function
     boot();
+    
 }
 
 void process_scan() {
+    
     // The AP requested a scan. Respond with the Component ID
     scan_message* packet = (scan_message*) transmit_buffer;
     packet->component_id = COMPONENT_ID;
     secure_send(transmit_buffer, sizeof(scan_message));
+    
 }
 
 void process_validate() {
+    
     // The AP requested a validation. Respond with the Component ID
     validate_message* packet = (validate_message*) transmit_buffer;
     packet->component_id = COMPONENT_ID;
     secure_send(transmit_buffer, sizeof(validate_message));
+    
 }
 
 void process_attest() {
-    // process_validate();
+    
     // The AP requested attestation. Respond with the attestation data
 
     /****************************************************************************
@@ -310,7 +329,7 @@ void process_attest() {
     uint8_t len = sprintf((char*)transmit_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
     secure_send(transmit_buffer, len);
-    // send_packet_and_ack(len, transmit_buffer);
+    
 }
 
 /**
@@ -319,15 +338,17 @@ void process_attest() {
  * @return int: Number of bytes received from the AP
 */
 int wake_comp() {
+    
     uint8_t data[1] = {0};
     
     int len = wait_and_receive_packet(data);
     if (len == ERROR_RETURN) {
+        
         return ERROR_RETURN;
     }
 
     send_packet_and_ack(len, data);
-
+    
     return len;
 }
 

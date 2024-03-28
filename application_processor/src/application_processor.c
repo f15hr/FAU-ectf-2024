@@ -114,6 +114,9 @@ flash_entry flash_status;
 */
 
 int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
+    if (get_random_trng() == ERROR_RETURN){
+        return ERROR_RETURN;
+    }
     int ret = 0;
     int err = 0;
     uint8_t snd_len[1] = {len};
@@ -191,6 +194,9 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
  * This function must be implemented by your team to align with the security requirements.
 */
 int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, uint8_t* buffer) {
+    if (get_random_trng() == ERROR_RETURN){
+        return ERROR_RETURN;
+    }
     int ret = 0;
     int err = 0;
     uint8_t rcv_len[1] = {0};
