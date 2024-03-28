@@ -692,6 +692,10 @@ int main() {
     char token_buf[BUFFER_TOKEN_SIZE + 1] = {0};
     
     while (1) {
+        XMEMSET(cmd_buf, 0, BUFFER_CMD_SIZE + 1);
+        XMEMSET(pin_buf, 0, BUFFER_PIN_SIZE + 1);
+        XMEMSET(token_buf, 0, BUFFER_TOKEN_SIZE + 1);
+
         recv_input("Enter Command: ", cmd_buf, BUFFER_CMD_SIZE);
 
         // Execute requested command
