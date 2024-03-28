@@ -1,5 +1,5 @@
 def hash_value(value):
-    return hashlib.sha512(value.encode()).digest().hex()
+    return hashlib.sha512(value.encode()).digest()[::-1].hex()
 
 def update_file(file_path, pin_hash, token_hash):
     with open(file_path, 'r') as file:
