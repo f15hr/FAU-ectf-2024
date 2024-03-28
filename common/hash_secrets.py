@@ -1,5 +1,5 @@
 def hash_value(value):
-    return hashlib.sha512(value.encode()).digest()[::-1].hex()
+    return hashlib.sha512(value.encode()).hexdigest()
 
 def update_file(file_path, pin_hash, token_hash):
     with open(file_path, 'r') as file:
@@ -28,9 +28,7 @@ def main():
 
     if ap_pin and ap_token:
         pin_hash = hash_value(ap_pin)
-        print(ap_pin)
         token_hash = hash_value(ap_token)
-        print(ap_token)
         update_file(file_path, pin_hash, token_hash)
 
 if __name__ == '__main__':

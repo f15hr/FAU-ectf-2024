@@ -570,7 +570,16 @@ int validate_pin(char *buf) {
         return ERROR_RETURN;
     }
 
-    if (!XSTRNCMP(hash, AP_PIN, BUFFER_HASH_SIZE)) {
+    const char pin_string[] = AP_PIN; 
+    const char *pos = pin_string;
+    unsigned char ap_pin[BUFFER_HASH_SIZE];
+    
+    for (size_t count = 0; count < BUFFER_HASH_SIZE; count++) {
+        sscanf(pos, "%2hhx", &ap_pin[count]);
+        pos += 2;
+    }
+
+    if (!XSTRNCMP(hash, ap_pin, BUFFER_HASH_SIZE)) {
         print_debug("Pin Accepted!\n");
         XMEMSET(buf, 0, BUFFER_PIN_SIZE);
         return SUCCESS_RETURN;
@@ -591,7 +600,16 @@ int validate_token(char *buf) {
         return ERROR_RETURN;
     }
 
-    if (!XSTRNCMP(hash, AP_TOKEN, BUFFER_HASH_SIZE)) {
+    const char token_string[] = AP_TOKEN; 
+    const char *pos = token_string;
+    unsigned char ap_token[BUFFER_HASH_SIZE];
+
+    for (size_t count = 0; count < BUFFER_HASH_SIZE; count++) {
+        sscanf(pos, "%2hhx", &ap_token[count]);
+        pos += 2;
+    }
+
+    if (!XSTRNCMP(hash, ap_token, BUFFER_HASH_SIZE)) {
         print_debug("Token Accepted!\n");
         XMEMSET(buf, 0, BUFFER_TOKEN_SIZE);
         return SUCCESS_RETURN;
@@ -607,6 +625,7 @@ void attempt_boot() {
         print_error("Components could not be validated\n");
         return;
     }
+    
     print_debug("All Components validated\n");
     if (boot_components()) {
         print_error("Failed to boot all components\n");
