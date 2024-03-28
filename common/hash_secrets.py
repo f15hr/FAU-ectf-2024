@@ -1,30 +1,37 @@
 def hash_value(value):
-    # Using SHA-256 hash algorithm
-    return hashlib.sha256(value.encode()).hexdigest()
+    return hashlib.sha512(value.encode()).hexdigest()
+
+def update_file(file_path, pin_hash, token_hash):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+
+    with open(file_path, 'w') as file:
+        for line in lines:
+            if line.strip().startswith('#define AP_PIN'):
+                file.write(f'#define AP_PIN "{pin_hash}"\n')
+            elif line.strip().startswith('#define AP_TOKEN'):
+                file.write(f'#define AP_TOKEN "{token_hash}"\n')
+            else:
+                file.write(line)
 
 def main():
     file_path = '../application_processor/inc/ectf_params.h'
-    
-    # Read the contents of the file
+    ap_pin = None
+    ap_token = None
+
     with open(file_path, 'r') as file:
-        lines = file.readlines()
-    
-    # Process each line and update the values
-    for i, line in enumerate(lines):
-        if line.startswith('#define AP_PIN'):
-            parts = line.split(maxsplit=2)  # Split on the first space
-            pin = parts[1].strip('"')
-            hashed_pin = hash_value(pin)
-            lines[i] = f'#define AP_PIN "{hashed_pin}"\n'
-        elif line.startswith('#define AP_TOKEN'):
-            parts = line.split(maxsplit=2)  # Split on the first space
-            token = parts[1].strip('"')
-            hashed_token = hash_value(token)
-            lines[i] = f'#define AP_TOKEN "{hashed_token}"\n'
-    
-    # Write the updated contents back to the file
-    with open(file_path, 'w') as file:
-        file.writelines(lines)
+        for line in file:
+            if line.strip().startswith('#define AP_PIN'):
+                ap_pin = line.split('"')[1]
+            elif line.strip().startswith('#define AP_TOKEN'):
+                ap_token = line.split('"')[1]
+
+    if ap_pin and ap_token:
+        pin_hash = hash_value(ap_pin)
+        print(ap_pin)
+        token_hash = hash_value(ap_token)
+        print(ap_token)
+        update_file(file_path, pin_hash, token_hash)
 
 if __name__ == '__main__':
     import os
