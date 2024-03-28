@@ -30,9 +30,6 @@
 #include "board_link.h"
 #include "simple_flash.h"
 #include "host_messaging.h"
-#ifdef CRYPTO_EXAMPLE
-#include "simple_crypto.h"
-#endif
 
 #include "wolfssl/wolfssl/ssl.h"
 #include "wolfssl_rxtx.h"
