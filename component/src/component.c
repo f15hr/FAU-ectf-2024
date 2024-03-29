@@ -118,10 +118,13 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t 
     WOLFSSL_CTX *ctx; 
     WOLFSSL *ssl; 
 
+    for (int i = 0; i < 1000; i++) {
     tbuf = ssl_new_buf(0);
     ctx = ssl_new_context_server();
     ssl = ssl_new_session(ctx, tbuf);
     ret = ssl_handshake_server(ssl, tbuf);
+        if (ret == WOLFSSL_SUCCESS) break;
+    }
 
     if (ret != WOLFSSL_SUCCESS)
         return ERROR_RETURN;
@@ -188,11 +191,13 @@ int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
     WOLFSSL_CTX *ctx; 
     WOLFSSL *ssl; 
 
-    tbuf = ssl_new_buf(0);
-    ctx = ssl_new_context_server();
-    ssl = ssl_new_session(ctx, tbuf);
-    ret = ssl_handshake_server(ssl, tbuf);
-
+    for (int i = 0; i < 1000; i++) {
+        tbuf = ssl_new_buf(0);
+        ctx = ssl_new_context_server();
+        ssl = ssl_new_session(ctx, tbuf);
+        ret = ssl_handshake_server(ssl, tbuf);
+        if (ret == WOLFSSL_SUCCESS) break;
+    }
     if (ret != WOLFSSL_SUCCESS)
         return ERROR_RETURN;
 
