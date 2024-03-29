@@ -135,15 +135,17 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t address, uint8_t*
     tls13_buf *tbuf; 
     WOLFSSL_CTX *ctx; 
     WOLFSSL *ssl; 
-    do {
-        tbuf = ssl_new_buf(address);
-        ctx = ssl_new_context_client();
-        ssl = ssl_new_session(ctx, tbuf);
-        // Need to delay the AP to ensure the component is 
-        // in its loop before proceeding
-        MXC_Delay(5000);
-        ret = ssl_handshake_client(ssl, tbuf);
-    } while (ret == -1);
+
+    tbuf = ssl_new_buf(address);
+    ctx = ssl_new_context_client();
+    ssl = ssl_new_session(ctx, tbuf);
+    // Need to delay the AP to ensure the component is 
+    // in its loop before proceeding
+    MXC_Delay(5000);
+    ret = ssl_handshake_client(ssl, tbuf);
+
+    if (ret != WOLFSSL_SUCCESS)
+        return ERROR_RETURN;
 
     // Send length of data to transmit via wolfSSL
     do {
@@ -215,15 +217,17 @@ int __attribute__((noinline, optimize(0))) secure_receive(i2c_addr_t address, ui
     tls13_buf *tbuf; 
     WOLFSSL_CTX *ctx; 
     WOLFSSL *ssl; 
-    do {
-        tbuf = ssl_new_buf(address);
-        ctx = ssl_new_context_client();
-        ssl = ssl_new_session(ctx, tbuf);
-        // Need to delay the AP to ensure the component is 
-        // in its loop before proceeding
-        MXC_Delay(5000);
-        ret = ssl_handshake_client(ssl, tbuf);
-    } while (ret == -1);
+
+    tbuf = ssl_new_buf(address);
+    ctx = ssl_new_context_client();
+    ssl = ssl_new_session(ctx, tbuf);
+    // Need to delay the AP to ensure the component is 
+    // in its loop before proceeding
+    MXC_Delay(5000);
+    ret = ssl_handshake_client(ssl, tbuf);
+
+    if (ret != WOLFSSL_SUCCESS)
+        return ERROR_RETURN;
 
     // Get length of data being transmitted via wolfSSL
     do {

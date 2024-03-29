@@ -117,12 +117,14 @@ int __attribute__((noinline, optimize(0))) secure_send(uint8_t* buffer, uint8_t 
     tls13_buf *tbuf; 
     WOLFSSL_CTX *ctx; 
     WOLFSSL *ssl; 
-    do {
-        tbuf = ssl_new_buf(0);
-        ctx = ssl_new_context_server();
-        ssl = ssl_new_session(ctx, tbuf);
-        ret = ssl_handshake_server(ssl, tbuf);
-    } while (ret == -1);
+
+    tbuf = ssl_new_buf(0);
+    ctx = ssl_new_context_server();
+    ssl = ssl_new_session(ctx, tbuf);
+    ret = ssl_handshake_server(ssl, tbuf);
+
+    if (ret != WOLFSSL_SUCCESS)
+        return ERROR_RETURN;
 
     // Send length of data to transmit via wolfSSL
     do {
@@ -185,12 +187,15 @@ int __attribute__((noinline, optimize(0))) secure_receive(uint8_t* buffer) {
     tls13_buf *tbuf; 
     WOLFSSL_CTX *ctx; 
     WOLFSSL *ssl; 
-    do {
-        tbuf = ssl_new_buf(0);
-        ctx = ssl_new_context_server();
-        ssl = ssl_new_session(ctx, tbuf);
-        ret = ssl_handshake_server(ssl, tbuf);
-    } while (ret == -1);
+
+    tbuf = ssl_new_buf(0);
+    ctx = ssl_new_context_server();
+    ssl = ssl_new_session(ctx, tbuf);
+    ret = ssl_handshake_server(ssl, tbuf);
+
+    if (ret != WOLFSSL_SUCCESS)
+        return ERROR_RETURN;
+
 
     // Get length of data being transmitted via wolfSSL
     do {
